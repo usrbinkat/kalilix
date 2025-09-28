@@ -67,11 +67,15 @@ fi
 # Kalilix Development Environment Configuration
 # ============================================================================
 
-# Mise configuration
+# Mise configuration - automatically activates tools and environments
 export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 if [ -f "$HOME/.local/bin/mise" ]; then
     eval "$($HOME/.local/bin/mise activate bash)"
 fi
+
+# NPM global packages configuration (for Claude Code)
+export NPM_CONFIG_PREFIX="$HOME/.npm-global"
+export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
 
 # Nix configuration
 export PATH="/nix/var/nix/profiles/default/bin:$PATH"

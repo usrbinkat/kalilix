@@ -1,9 +1,19 @@
 { pkgs, lib, inputs }:
 
+let
+  # Import Claude Code package from node2nix
+  claudeCodePkgs = import ../packages/claude-code {
+    inherit pkgs;
+    inherit (pkgs.stdenv.hostPlatform) system;
+    nodejs = pkgs.nodejs_22;  # Override to use Node.js 22 LTS
+  };
+in
 pkgs.mkShell {
   name = "kalilix-base";
 
   packages = with pkgs; [
+    # Claude Code - AI assistant (from node2nix)
+    claudeCodePkgs."@anthropic-ai/claude-code-1.0.80"
     # Core tools
     git
     gh
@@ -12,7 +22,7 @@ pkgs.mkShell {
     yq-go
 
     # Modern CLI replacements
-    ripgrep  # grep
+    ripgrep  # grep (also required by Claude Code)
     fd       # find
     bat      # cat
     eza      # ls
@@ -52,14 +62,19 @@ pkgs.mkShell {
     # Configure starship if available
     command -v starship &>/dev/null && eval "$(starship init bash)"
 
+    # Activate mise for automatic environment management
+    if command -v mise &>/dev/null; then
+      eval "$(mise activate bash)"
+    fi
+
     # Show banner
     echo "╔══════════════════════════════════════════════╗"
     echo "║     🚀 Kalilix Development Environment        ║"
     echo "║              Base Shell                       ║"
     echo "╚══════════════════════════════════════════════╝"
     echo ""
-    echo "Platform: ${KALILIX_PLATFORM:-container}"
-    echo "Shell: ${KALILIX_SHELL:-base}"
+    echo "Platform: ''${KALILIX_PLATFORM:-container}"
+    echo "Shell: ''${KALILIX_SHELL:-base}"
     echo ""
     echo "Available commands:"
     echo "  mise tasks    - Show all available tasks"

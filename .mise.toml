@@ -78,6 +78,7 @@ _.path = [
   "/nix/var/nix/profiles/default/bin"
 ]
 
+
 # Core paths
 PROJECT_ROOT = "{{ config_root }}"
 KALILIX_ROOT = "{{ config_root }}"
@@ -127,6 +128,71 @@ includes = [
   ".config/mise/toml/dev.toml",  # Development tasks
   ".config/mise/toml/setup.toml", # Setup and initialization
 ]
+
+# Hooks - Automatic Nix shell activation (replaces direnv .envrc)
+[hooks.enter]
+shell = "bash"
+script = '''
+# Only activate once per session
+if [ -z "$KALILIX_ACTIVE" ]; then
+    echo "🚀 Activating Kalilix Nix development environment..."
+
+    # Check if flake exists
+    if [ ! -f flake.nix ]; then
+        echo "   ⚠️  No flake.nix found - run 'mise run setup' to initialize"
+        return
+    fi
+
+    # Platform-aware activation
+    if [ -f /.dockerenv ] || [ -n "${container:-}" ]; then
+        # Container mode - use sudo for Nix commands (--init none requirement)
+        if command -v nix &>/dev/null; then
+            echo "   🐳 Container mode - Loading Nix environment variables..."
+            # Load Nix environment without entering new shell
+            eval "$(sudo -E nix print-dev-env --impure 2>/dev/null || true)"
+            export KALILIX_ACTIVE="container"
+            export KALILIX_PLATFORM="container"
+            echo "   ✅ Nix environment loaded! All tools available."
+        else
+            echo "   ❌ Nix not found - run 'mise run setup'"
+        fi
+    else
+        # Native/WSL mode - direct Nix access
+        if command -v nix &>/dev/null; then
+            echo "   💻 Native mode - Loading Nix environment variables..."
+            # Load Nix environment without entering new shell
+            eval "$(nix print-dev-env --impure 2>/dev/null || true)"
+            export KALILIX_ACTIVE="native"
+            export KALILIX_PLATFORM="native"
+            echo "   ✅ Nix environment loaded! All tools available."
+        else
+            echo "   ❌ Nix not found - run 'mise run setup'"
+        fi
+    fi
+
+    # Show available shortcuts
+    if [ -n "$KALILIX_ACTIVE" ]; then
+        echo ""
+        echo "   💡 Quick commands:"
+        echo "      kx         - Kalilix CLI"
+        echo "      mise tasks - Show all tasks"
+        echo "      claude-code - AI assistant"
+    fi
+fi
+'''
+
+[hooks.leave]
+shell = "bash"
+script = '''
+# Clean up when leaving the project
+if [ -n "$KALILIX_ACTIVE" ]; then
+    echo "👋 Leaving Kalilix project..."
+    echo "   Environment variables from Nix remain active in this shell"
+    echo "   Start a new shell if you need a clean environment"
+    # Note: We don't unset variables as this would require complex tracking
+    # and mise hooks don't have cleanup capabilities like direnv
+fi
+'''
 
 # Tool versions (managed by Nix, documented here for reference)
 [tools]

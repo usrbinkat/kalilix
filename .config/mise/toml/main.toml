@@ -127,10 +127,54 @@ echo ""
 '''
 
 ["shell"]
-description = "🐚 Enter default Nix development shell"
+description = "🐚 Enter interactive Nix development shell"
+alias = ["s", "dev"]
 run = '''
 #!/usr/bin/env bash
-mise run nix:shell "${KALILIX_SHELL:-base}"
+echo "🐚 Entering interactive Nix development shell..."
+echo ""
+
+# Auto-detect platform and enter appropriate shell
+if [ -f /.dockerenv ] || [ -n "${container:-}" ]; then
+    echo "🐳 Container mode - Using sudo for Nix shell access"
+    exec sudo -E nix develop ${KALILIX_ROOT:-.}#default --impure --command bash
+else
+    echo "💻 Native mode - Direct Nix shell access"
+    exec nix develop ${KALILIX_ROOT:-.}#default --impure
+fi
+'''
+
+["env"]
+description = "🌟 Show current environment status and available tools"
+alias = ["environ", "environment"]
+run = '''
+#!/usr/bin/env bash
+echo "Kalilix Environment Status"
+echo "=========================="
+echo ""
+
+if [ -n "$KALILIX_ACTIVE" ]; then
+    echo "✅ Nix environment: ACTIVE ($KALILIX_PLATFORM mode)"
+    echo "✅ mise: $(mise --version)"
+
+    echo ""
+    echo "Available tools:"
+    echo "  🤖 claude-code: $(command -v claude-code || echo 'checking...')"
+    echo "  🔍 ripgrep: $(command -v rg || echo 'not found')"
+    echo "  🦀 fd: $(command -v fd || echo 'not found')"
+    echo "  🐱 bat: $(command -v bat || echo 'not found')"
+    echo "  📂 eza: $(command -v eza || echo 'not found')"
+
+    echo ""
+    echo "Quick commands:"
+    echo "  mise tasks       - Show all available tasks"
+    echo "  mise run shell   - Enter interactive Nix shell"
+    echo "  kx              - Kalilix CLI"
+else
+    echo "⚠️  Nix environment: NOT ACTIVE"
+    echo "   💡 Navigate to a project directory to auto-activate"
+    echo "   💡 Or run: mise run shell"
+fi
 '''
 
 ["shell:*"]
