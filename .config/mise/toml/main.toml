@@ -131,17 +131,12 @@ description = "🐚 Enter interactive Nix development shell"
 alias = ["s", "dev"]
 run = '''
 #!/usr/bin/env bash
-echo "🐚 Entering interactive Nix development shell..."
+echo "🐚 Entering Nix development shell..."
+echo "   Mode: Multi-user daemon with systemd"
 echo ""
 
-# Auto-detect platform and enter appropriate shell
-if [ -f /.dockerenv ] || [ -n "${container:-}" ]; then
-    echo "🐳 Container mode - Using sudo for Nix shell access"
-    exec sudo -E nix develop ${KALILIX_ROOT:-.}#default --impure --command bash
-else
-    echo "💻 Native mode - Direct Nix shell access"
-    exec nix develop ${KALILIX_ROOT:-.}#default --impure
-fi
+# Direct Nix access through daemon - no sudo needed
+exec nix develop ${KALILIX_ROOT:-.}#default --impure
 '''
 
 ["env"]

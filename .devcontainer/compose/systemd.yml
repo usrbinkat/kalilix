@@ -1,0 +1,232 @@
+# DevContainer systemd configuration
+# Production-grade systemd-based container with multi-user Nix daemon
+# Zero technical debt - clean architecture with proper process management
+
+services:
+  devcontainer:
+    build:
+      context: ../../.devcontainer
+      dockerfile: Dockerfile.systemd
+      args:
+        USERNAME: debian
+        USER_UID: 1000
+        USER_GID: 1000
+
+    image: kalilix-systemd:latest
+    container_name: kalilix-systemd
+    hostname: kalilix-dev
+
+    # Critical: Let systemd be PID 1, not Docker's init
+    init: false
+
+    # Systemd requires specific signal for graceful shutdown
+    stop_signal: SIGRTMIN+3
+    stop_grace_period: 30s
+
+    # Environment configuration
+    env_file:
+      - ../../.env
+
+    environment:
+      # Systemd container markers
+      container: docker
+      SYSTEMD_COLORS: "true"
+      SYSTEMD_LOG_LEVEL: info
+
+      # User session configuration
+      XDG_RUNTIME_DIR: /run/user/1000
+      DBUS_SESSION_BUS_ADDRESS: unix:path=/run/user/1000/bus
+
+      # Nix daemon configuration
+      # CRITICAL: NIX_REMOTE must NEVER be set here - would cause fork bomb
+      # NIX_REMOTE is set only for user sessions via /etc/profile.d/nix-daemon-client.sh
+      NIX_BUILD_CORES: 0  # Use all available cores
+      NIX_MAX_JOBS: auto   # Parallel job execution
+
+      # Development environment
+      DOCKER_BUILDKIT: "1"
+      COMPOSE_DOCKER_CLI_BUILD: "1"
+      BUILDKIT_PROGRESS: plain
+
+      # Kalilix environment
+      KALILIX_ROOT: /workspace
+      KALILIX_PLATFORM: systemd-container
+      KALILIX_SHELL: "${KALILIX_SHELL:-base}"
+
+      # Mise configuration
+      MISE_DATA_DIR: /home/debian/.local/share/mise
+      MISE_CONFIG_DIR: /home/debian/.config/mise
+      MISE_CACHE_DIR: /home/debian/.cache/mise
+      MISE_STATE_DIR: /home/debian/.local/state/mise
+      MISE_TRUSTED_CONFIG_PATHS: /workspace
+      MISE_EXPERIMENTAL: "1"
+      MISE_YES: "1"
+
+    # Security configuration - minimal required capabilities
+    privileged: false  # Never use privileged mode
+    cap_add:
+      - SYS_ADMIN     # Required for systemd cgroup management
+      - SYS_NICE      # Process priority management
+      - SYS_RESOURCE  # Resource limit management
+      - NET_ADMIN     # Network namespace management (for Nix sandbox)
+      - SETPCAP       # Capability manipulation for build isolation
+    cap_drop:
+      - SYS_BOOT      # Prevent container from rebooting host
+      - SYS_TIME      # Prevent system time changes
+      - MKNOD         # Prevent device node creation
+      - AUDIT_WRITE   # Prevent audit log manipulation
+
+    # Security options for systemd operation
+    security_opt:
+      - seccomp:unconfined  # Required for systemd process management
+      - apparmor:unconfined # Required for service management
+
+    # Systemd requires tmpfs for runtime directories
+    tmpfs:
+      - /run:exec,mode=755,size=256M,uid=0,gid=0
+      - /run/lock:noexec,nosuid,nodev,mode=1777,size=64M
+      - /tmp:exec,mode=1777,size=2G
+      - /run/user/1000:exec,mode=700,size=128M,uid=1000,gid=1000
+
+    # Volume mounts
+    volumes:
+      # Critical: cgroup mount for systemd
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+
+      # Workspace mount with optimal caching
+      - ../../:/workspace:cached
+
+      # Docker socket for Docker-outside-of-Docker
+      - /var/run/docker.sock:/var/run/docker-host.sock
+
+      # Nix store and state - persistent across rebuilds
+      - nix-store:/nix
+      - nix-var:/nix/var
+
+      # Development tool caches
+      - mise-data:/home/debian/.local/share/mise
+      - mise-cache:/home/debian/.cache/mise
+      - mise-state:/home/debian/.local/state/mise
+
+      # Language-specific caches
+      - cargo-registry:/home/debian/.cargo/registry
+      - cargo-git:/home/debian/.cargo/git
+      - cargo-target:/workspace/target
+      - go-pkg:/home/debian/go/pkg
+      - go-build:/home/debian/.cache/go-build
+      - npm-cache:/home/debian/.npm
+      - npm-global:/home/debian/.npm-global
+      - pip-cache:/home/debian/.cache/pip
+
+      # User configuration
+      - user-config:/home/debian/.config
+      - bash-history:/home/debian/.bash_history.d
+
+      # Systemd journal persistence
+      - systemd-journal:/var/log/journal
+
+    # Network configuration
+    networks:
+      kalilix:
+        ipv4_address: 10.15.0.10
+
+    # System configuration for development
+    sysctls:
+      # Network optimizations
+      - net.ipv4.tcp_tw_reuse=1
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.ip_unprivileged_port_start=0
+      # IPC optimizations - DISABLED: Not compatible with ipc: host
+      # When using ipc: host, IPC sysctls cannot be modified as they would affect the host
+      # - kernel.msgmax=65536
+      # - kernel.msgmnb=65536
+      # - kernel.shmmax=68719476736
+      # - kernel.shmall=4294967296
+
+    # Resource limits for development
+    ulimits:
+      nofile:
+        soft: 524288
+        hard: 524288
+      nproc:
+        soft: 131072
+        hard: 131072
+      memlock:
+        soft: -1
+        hard: -1
+      rtprio:
+        soft: 99
+        hard: 99
+
+    # Process namespace configuration
+    # pid: host  # DISABLED: Conflicts with systemd as PID 1 in container
+    ipc: host  # Share IPC namespace for development tools
+
+    # User configuration
+    user: root  # Systemd must start as root, services run as debian
+    working_dir: /workspace
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Logging configuration
+    logging:
+      driver: json-file
+      options:
+        max-size: "100m"
+        max-file: "10"
+        labels: "com.kalilix.service"
+        env: "KALILIX_PLATFORM,KALILIX_SHELL"
+
+    # Labels for service discovery
+    labels:
+      com.kalilix.managed: "true"
+      com.kalilix.type: "systemd-devcontainer"
+      com.kalilix.version: "2.0.0"
+      com.kalilix.nix: "multi-user-daemon"
+
+# Named volumes with proper drivers
+volumes:
+  # Nix store - critical for package management
+  nix-store:
+    driver: local
+
+  nix-var:
+    driver: local
+
+  # Mise configuration and cache
+  mise-data:
+    driver: local
+  mise-cache:
+    driver: local
+  mise-state:
+    driver: local
+
+  # Language-specific caches
+  cargo-registry:
+    driver: local
+  cargo-git:
+    driver: local
+  cargo-target:
+    driver: local
+  go-pkg:
+    driver: local
+  go-build:
+    driver: local
+  npm-cache:
+    driver: local
+  npm-global:
+    driver: local
+  pip-cache:
+    driver: local
+
+  # User configuration
+  user-config:
+    driver: local
+  bash-history:
+    driver: local
+
+  # Systemd journal for debugging
+  systemd-journal:
+    driver: local

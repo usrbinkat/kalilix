@@ -67,31 +67,24 @@ fi
 # Kalilix Development Environment Configuration
 # ============================================================================
 
+# PATH is configured in /etc/profile.d/01-system-paths.sh
+# NIX_REMOTE is configured in /etc/profile.d/nix-daemon-client.sh
+
 # Mise configuration - automatically activates tools and environments
-export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:$PATH"
 if [ -f "$HOME/.local/bin/mise" ]; then
     eval "$($HOME/.local/bin/mise activate bash)"
 fi
 
 # NPM global packages configuration (for Claude Code)
 export NPM_CONFIG_PREFIX="$HOME/.npm-global"
-export PATH="$NPM_CONFIG_PREFIX/bin:$PATH"
 
-# Nix configuration
-export PATH="/nix/var/nix/profiles/default/bin:$PATH"
+# Source Nix daemon environment if available
 if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
     . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
 fi
 
-# Nix wrappers for container mode (--init none requires root)
-# These allow the debian user to run nix commands transparently via sudo
-# Using sudo -E to preserve environment including working directory
-alias nix='sudo -E nix'
-alias nix-shell='sudo -E nix-shell'
-alias nix-build='sudo -E nix-build'
-alias nix-env='sudo -E nix-env'
-alias nix-store='sudo -E nix-store'
-alias nix-collect-garbage='sudo -E nix-collect-garbage'
+# No sudo wrappers needed - Nix daemon runs with proper permissions
+# All nix commands work natively through the daemon socket
 
 # Kalilix environment
 export KALILIX_ROOT="/workspace"
@@ -104,10 +97,11 @@ alias kx-shell='mise run shell'
 alias kx-status='mise run status'
 
 # Welcome message (only in interactive shells)
-if [ -n "$PS1" ] && [ -z "$KALILIX_SILENT" ]; then
-    if [ -f /workspace/.mise.toml ]; then
-        echo "🚀 Kalilix Development Environment"
-        echo "   Run 'mise run help' for available commands"
-        echo ""
-    fi
-fi
+# Disabled - handled by nix develop shellHook instead
+# if [ -n "$PS1" ] && [ -z "$KALILIX_SILENT" ]; then
+#     if [ -f /workspace/.mise.toml ]; then
+#         echo "🚀 Kalilix Development Environment"
+#         echo "   Run 'mise run help' for available commands"
+#         echo ""
+#     fi
+# fi

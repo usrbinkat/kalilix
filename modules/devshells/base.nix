@@ -14,6 +14,10 @@ pkgs.mkShell {
   packages = with pkgs; [
     # Claude Code - AI assistant (from node2nix)
     claudeCodePkgs."@anthropic-ai/claude-code-1.0.80"
+    
+    # Locale support
+    glibcLocales
+    
     # Core tools
     git
     gh
@@ -56,6 +60,18 @@ pkgs.mkShell {
   ];
 
   shellHook = ''
+    # Set up locale archive path for Nix environments
+    # This provides the locale data within the Nix shell
+    export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
+    
+    # Fix locale settings - use C.UTF-8 which is always available
+    # This prevents setlocale warnings in containers
+    export LANG=C.UTF-8
+    export LC_CTYPE=C.UTF-8
+    export LC_COLLATE=C.UTF-8
+    # Unset LC_ALL to avoid conflicts
+    unset LC_ALL 2>/dev/null || true
+    
     # Load .env if exists
     [ -f .env ] && source .env
 
@@ -93,5 +109,10 @@ pkgs.mkShell {
     KALILIX_SHELL = "base";
     EDITOR = "vim";
     PAGER = "bat";
+    
+    # Locale settings - point to Nix's locale archive
+    LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
+    LANG = "C.UTF-8";
+    # Don't set LC_* variables in env, let shellHook handle them
   };
 }

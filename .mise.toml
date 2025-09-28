@@ -121,62 +121,30 @@ MISE_TASK_PARALLEL_DEFAULT = "false"
 # Task configuration
 [task_config]
 includes = [
-  ".config/mise/toml",           # Include all TOML files
-  ".config/mise/toml/main.toml", # Nix tasks
-  ".config/mise/toml/nix.toml",  # Nix management
+  # Explicit file inclusion for clarity and control
+  ".config/mise/toml/main.toml",   # Main tasks and help
+  ".config/mise/toml/nix.toml",    # Nix management
   ".config/mise/toml/docker.toml", # Docker operations
-  ".config/mise/toml/dev.toml",  # Development tasks
-  ".config/mise/toml/setup.toml", # Setup and initialization
+  ".config/mise/toml/dev.toml",    # Development tasks
+  ".config/mise/toml/setup.toml"   # Setup and initialization
+  # Directory include removed to prevent double-loading
 ]
 
-# Hooks - Automatic Nix shell activation (replaces direnv .envrc)
+# Hooks - Automatic Nix shell activation with systemd daemon
 [hooks.enter]
 shell = "bash"
 script = '''
-# Only activate once per session
-if [ -z "$KALILIX_ACTIVE" ]; then
-    echo "🚀 Activating Kalilix Nix development environment..."
-
-    # Check if flake exists
-    if [ ! -f flake.nix ]; then
-        echo "   ⚠️  No flake.nix found - run 'mise run setup' to initialize"
-        return
-    fi
-
-    # Platform-aware activation
-    if [ -f /.dockerenv ] || [ -n "${container:-}" ]; then
-        # Container mode - use sudo for Nix commands (--init none requirement)
-        if command -v nix &>/dev/null; then
-            echo "   🐳 Container mode - Loading Nix environment variables..."
-            # Load Nix environment without entering new shell
-            eval "$(sudo -E nix print-dev-env --impure 2>/dev/null || true)"
-            export KALILIX_ACTIVE="container"
-            export KALILIX_PLATFORM="container"
-            echo "   ✅ Nix environment loaded! All tools available."
-        else
-            echo "   ❌ Nix not found - run 'mise run setup'"
-        fi
+# Auto-enter Nix development shell when in workspace
+if [ -z "$IN_NIX_SHELL" ] && [ -f "flake.nix" ]; then
+    # Check if we're in an interactive shell
+    if [[ $- == *i* ]]; then
+        # Interactive: use exec to replace shell
+        echo "🚀 Entering Nix development environment..."
+        exec nix develop
     else
-        # Native/WSL mode - direct Nix access
-        if command -v nix &>/dev/null; then
-            echo "   💻 Native mode - Loading Nix environment variables..."
-            # Load Nix environment without entering new shell
-            eval "$(nix print-dev-env --impure 2>/dev/null || true)"
-            export KALILIX_ACTIVE="native"
-            export KALILIX_PLATFORM="native"
-            echo "   ✅ Nix environment loaded! All tools available."
-        else
-            echo "   ❌ Nix not found - run 'mise run setup'"
-        fi
-    fi
-
-    # Show available shortcuts
-    if [ -n "$KALILIX_ACTIVE" ]; then
-        echo ""
-        echo "   💡 Quick commands:"
-        echo "      kx         - Kalilix CLI"
-        echo "      mise tasks - Show all tasks"
-        echo "      claude-code - AI assistant"
+        # Non-interactive: just export the PATH
+        # This allows docker exec commands to work
+        eval "$(nix develop --command bash -c 'echo export PATH=\"$PATH\"')"
     fi
 fi
 '''

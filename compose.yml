@@ -1,24 +1,26 @@
-# Kalilix Workspace Docker Compose Configuration
+# Kalilix Systemd-Powered Development Environment
+# Production-grade containerized development with multi-user Nix daemon
 #
 # Primary Usage:
-#   docker compose up                   # Starts devcontainer (default variant)
-#   docker compose up -d                # Starts devcontainer in background
-#   docker compose down                 # Stops all services
+#   docker compose up                   # Starts systemd devcontainer
+#   docker compose up -d                # Starts in background with systemd
+#   docker compose down                 # Graceful systemd shutdown
 #
 # Service Control:
 #   docker compose ps                   # List running services
-#   docker compose logs devcontainer    # View devcontainer logs
-#   docker compose exec devcontainer bash    # Shell into running container
+#   docker compose logs devcontainer    # View systemd journal
+#   docker compose exec devcontainer systemctl status    # Check systemd services
+#   docker compose exec -u debian devcontainer bash      # User shell access
 #
 # Advanced Usage:
-#   docker compose build --no-cache devcontainer      # Rebuild image from scratch
+#   docker compose build --no-cache devcontainer         # Rebuild from scratch
+#   docker compose exec devcontainer journalctl -xef     # Follow system logs
 
 name: kalilix
 
 include:
-  - path: .devcontainer/compose/base.yml
-  - path: .devcontainer/compose/default.yml
-  # path: .config/docker/talos.k8s.yml
+  # Systemd-based devcontainer is now the only supported configuration
+  - path: .devcontainer/compose/systemd.yml
 
 networks:
   # Primary infrastructure network for all platform services

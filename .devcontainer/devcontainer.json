@@ -1,12 +1,16 @@
 {
   // https://containers.dev/implementors/json_reference/#general-properties
   "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
-  "name": "Kalilix",
+  "name": "Kalilix Systemd Container",
 
-  // Docker Compose configuration - compose.yml includes all necessary files via include directive
+  // Docker Compose configuration - now using systemd-based architecture
   "dockerComposeFile": "../compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace",
+
+  // Critical systemd configuration - managed by compose/systemd.yml
+  // "init": Controlled by compose file to ensure systemd runs as PID 1
+  "shutdownAction": "stopCompose", // Proper systemd shutdown
   // Use 'forwardPorts' to make a list of ports inside the container available locally
   "forwardPorts": [2222],
   "portsAttributes": { "2222": { "label": "openssh-server", "onAutoForward": "notify" } },
@@ -19,6 +23,7 @@
         // AI Assistants
         "github.copilot",
         "github.copilot-chat",
+	"anthropic.claude-code",
         // Development Tools
         "gruntfuggly.todo-tree",
         "wayou.vscode-todo-highlight",
@@ -56,13 +61,13 @@
       }
     }
   },
-  // Run as non-root user
+  // Run as non-root user (systemd runs as root, but VS Code connects as debian)
   "remoteUser": "debian",
+  "containerUser": "root",  // Systemd must run as root
   // Environment variables for devcontainer
   "containerEnv": {
     // "GCM_CREDENTIAL_STORE": "plaintext"  // Commented out - using gh CLI instead of GCM
   },
-  "containerUser": "debian",
   "updateRemoteUserUID": true,
   // Docker-outside-of-Docker, git, and gh cli features
   "features": {
@@ -70,12 +75,23 @@
     // "ghcr.io/devcontainers/features/git:1": {},
     // GitHub CLI - DISABLED for .git-credentials test
     // "ghcr.io/devcontainers/features/github-cli:1": {},
+    // Docker-outside-of-Docker - Re-enabled now that systemd is working
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
-      "dockerDashComposeVersion": "none",
+      "dockerDashComposeVersion": "v2",
       "installDockerBuildx": true,
-      "moby": false
+      "moby": false,
+      "version": "latest"
     }
   },
-  // Keep container running but allow entrypoint to execute
-  "overrideCommand": true
+
+  // Systemd container management - critical settings for systemd to work
+  "overrideCommand": false, // Do NOT override systemd as PID 1
+  // runArgs removed - init setting managed by compose/systemd.yml
+
+  // CRITICAL: Prevent VS Code from injecting entrypoint wrapper
+  // This ensures systemd runs directly as PID 1 without any shell wrapper
+  "overrideFeatureInstallOrder": false,
+
+  // Post-create commands to verify systemd is running
+  "postCreateCommand": "echo 'Waiting for systemd...' && sleep 5 && systemctl status --no-pager || true"
 }

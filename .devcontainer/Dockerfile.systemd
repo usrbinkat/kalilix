@@ -1,0 +1,277 @@
+# syntax=docker/dockerfile:1
+FROM docker.io/library/debian:13
+
+# Build-time only environment
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install systemd and essential packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Systemd and init
+    systemd \
+    systemd-sysv \
+    dbus \
+    dbus-user-session \
+    # Essential tools
+    sudo \
+    curl \
+    wget \
+    git \
+    ca-certificates \
+    xz-utils \
+    # Build essentials
+    build-essential \
+    cmake \
+    pkg-config \
+    libssl-dev \
+    # Development tools
+    python3-full \
+    python3-pip \
+    python3-venv \
+    pipx \
+    # Shell environments
+    bash \
+    bash-completion \
+    fish \
+    zsh \
+    # Editors
+    vim \
+    nano \
+    # Utilities
+    jq \
+    unzip \
+    zip \
+    gpg \
+    locales \
+    htop \
+    tree \
+    # Process management
+    procps \
+    psmisc \
+    lsof \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Configure locale properly - must be done before setting ENV variables
+RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
+    echo "C.UTF-8 UTF-8" >> /etc/locale.gen && \
+    dpkg-reconfigure --frontend=noninteractive locales && \
+    update-locale LANG=C.UTF-8
+
+# Now set the locale environment variables after locale is generated
+# Note: Don't set LC_ALL as it overrides all other LC_* variables and can cause issues
+ENV LANG=C.UTF-8
+ENV LANGUAGE=C:en
+
+# Clean up systemd for container - remove problematic units
+RUN rm -f /lib/systemd/system/multi-user.target.wants/* \
+    /etc/systemd/system/*.wants/* \
+    /lib/systemd/system/local-fs.target.wants/* \
+    /lib/systemd/system/sockets.target.wants/*udev* \
+    /lib/systemd/system/sockets.target.wants/*initctl* \
+    /lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup* \
+    /lib/systemd/system/systemd-update-utmp* \
+    /lib/systemd/system/getty.target
+
+# Disable unnecessary systemd services for containers
+RUN systemctl mask \
+    systemd-logind.service \
+    getty.target \
+    console-getty.service \
+    systemd-networkd.service \
+    systemd-resolved.service \
+    systemd-timesyncd.service \
+    systemd-hostnamed.service \
+    systemd-machined.service \
+    systemd-journald.service \
+    systemd-journal-flush.service \
+    systemd-journald.socket \
+    systemd-journald-dev-log.socket
+
+# The Nix installer will create the nixbld group and users with correct UIDs/GIDs
+# We don't pre-create them to avoid conflicts with expected IDs
+
+# Install Nix using Determinate Systems installer for multi-user mode
+# Using same configuration as original but with multi-user daemon mode
+RUN curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | \
+    sh -s -- install linux \
+    --extra-conf "sandbox = false" \
+    --extra-conf "experimental-features = nix-command flakes" \
+    --extra-conf "trusted-users = root debian @wheel @sudo" \
+    --extra-conf "max-jobs = auto" \
+    --extra-conf "cores = 0" \
+    --extra-conf "keep-outputs = true" \
+    --extra-conf "keep-derivations = true" \
+    --extra-conf "fallback = true" \
+    --extra-conf "warn-dirty = false" \
+    --extra-conf "system-features = nixos-test benchmark big-parallel kvm" \
+    --extra-conf "narinfo-cache-negative-ttl = 0" \
+    --extra-conf "accept-flake-config = true" \
+    --no-start-daemon \
+    --no-confirm
+
+# Enable Nix daemon systemd services
+RUN systemctl enable nix-daemon.socket nix-daemon.service
+
+# PATH configuration moved to /etc/profile.d/01-system-paths.sh for consistency
+# NIX_REMOTE=daemon moved to /etc/profile.d/nix-daemon-client.sh for user sessions only
+
+# Create systemd service for proper Nix daemon startup with environment
+# IMPORTANT: Do NOT set NIX_REMOTE=daemon for the daemon itself - causes fork bomb!
+RUN mkdir -p /etc/systemd/system/nix-daemon.service.d && \
+    cat > /etc/systemd/system/nix-daemon.service.d/override.conf << 'EOF'
+[Service]
+Environment="PATH=/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# NIX_REMOTE must NOT be set for the daemon process itself
+Restart=always
+RestartSec=5
+EOF
+
+# Copy sudoers configuration BEFORE creating user
+COPY rootfs/etc/sudoers.d/debian /etc/sudoers.d/debian
+RUN chmod 0440 /etc/sudoers.d/debian
+
+# Copy profile.d scripts for proper environment setup
+COPY rootfs/etc/profile.d/nix-daemon-client.sh /etc/profile.d/nix-daemon-client.sh
+COPY rootfs/etc/profile.d/01-system-paths.sh /etc/profile.d/01-system-paths.sh
+COPY rootfs/etc/profile.d/02-locale-fix.sh /etc/profile.d/02-locale-fix.sh
+RUN chmod 0644 /etc/profile.d/nix-daemon-client.sh /etc/profile.d/01-system-paths.sh /etc/profile.d/02-locale-fix.sh
+
+# Create debian user with proper groups for development
+RUN useradd -m -s /bin/bash -u 1000 -G sudo,nixbld,systemd-journal debian
+
+# Set up user runtime directory for systemd user sessions
+RUN mkdir -p /run/user/1000 && \
+    chown -R debian:debian /run/user/1000 && \
+    chmod 700 /run/user/1000
+
+# Create systemd user instance directories
+RUN mkdir -p /home/debian/.config/systemd/user && \
+    chown -R debian:debian /home/debian/.config
+
+# Copy skeleton files for shell configuration
+COPY rootfs/etc/skel/.bashrc /home/debian/.bashrc
+COPY rootfs/etc/skel/.profile /home/debian/.profile
+COPY rootfs/etc/skel/.zshrc /home/debian/.zshrc
+RUN mkdir -p /home/debian/.config/fish && \
+    chown -R debian:debian /home/debian/
+
+# Copy fish config if it exists
+COPY rootfs/etc/skel/.config/fish/config.fish /home/debian/.config/fish/config.fish
+
+# Fix permissions for all user files
+RUN chown -R debian:debian /home/debian/
+
+# Create workspace directory
+RUN mkdir -p /workspace && \
+    chown -R debian:debian /workspace
+
+# Create Kalilix initialization service
+RUN cat > /etc/systemd/system/kalilix-init.service << 'EOF'
+[Unit]
+Description=Kalilix Development Environment Initialization
+After=nix-daemon.service
+Wants=nix-daemon.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=debian
+WorkingDirectory=/workspace
+Environment="PATH=/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# NIX_REMOTE not set here - only for user sessions via profile.d
+ExecStartPre=/bin/bash -c 'until systemctl is-active nix-daemon.service; do sleep 1; done'
+ExecStart=/bin/bash -c '\
+    echo "🚀 Initializing Kalilix environment..." && \
+    echo "Platform: Container (systemd)" && \
+    echo "Nix: Multi-user daemon mode" && \
+    if [ -f /workspace/.mise.toml ]; then \
+    echo "Workspace: Mounted at /workspace"; \
+    fi && \
+    echo "✅ Kalilix ready!"'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+RUN systemctl enable kalilix-init.service
+
+# Mise is pre-installed in the image build, no need for install service
+
+# Install mise directly for the debian user (pre-install to save startup time)
+USER debian
+WORKDIR /home/debian
+
+RUN curl https://mise.run | sh && \
+    /home/debian/.local/bin/mise --version
+
+# Generate shell completions for mise
+RUN mkdir -p /home/debian/.local/share/bash-completion/completions \
+    /home/debian/.local/share/zsh/site-functions \
+    /home/debian/.config/fish/completions && \
+    /home/debian/.local/bin/mise completion bash > /home/debian/.local/share/bash-completion/completions/mise && \
+    /home/debian/.local/bin/mise completion zsh > /home/debian/.local/share/zsh/site-functions/_mise && \
+    /home/debian/.local/bin/mise completion fish > /home/debian/.config/fish/completions/mise.fish
+
+# Create mise state directory with proper ownership
+RUN mkdir -p /home/debian/.local/state/mise && \
+    chmod 755 /home/debian/.local/state /home/debian/.local/state/mise
+
+# Mise directories for build-time reference only
+# Runtime configuration is in compose/systemd.yml
+ENV MISE_INSTALL_PATH="/home/debian/.local/bin/mise"
+
+# PATH for mise managed in /etc/profile.d/01-system-paths.sh
+
+# Switch back to root for final configuration
+USER root
+WORKDIR /
+
+# Verify installations
+RUN /home/debian/.local/bin/mise --version && \
+    /nix/var/nix/profiles/default/bin/nix --version && \
+    echo "✅ Mise and Nix installed successfully"
+
+# Create systemd tmpfiles configuration for runtime directories
+RUN cat > /etc/tmpfiles.d/kalilix.conf << 'EOF'
+d /run/user/1000 0700 debian debian -
+d /run/user/1000/systemd 0755 debian debian -
+EOF
+
+# Prevent apt from starting services during package installation
+RUN echo 'exit 0' > /usr/sbin/policy-rc.d && \
+    chmod +x /usr/sbin/policy-rc.d
+
+# Create health check script
+RUN cat > /usr/local/bin/healthcheck << 'EOF'
+#!/bin/bash
+set -e
+systemctl is-system-running --quiet || [ $? -eq 1 ]
+systemctl is-active --quiet nix-daemon.socket
+systemctl is-active --quiet nix-daemon.service || true
+exit 0
+EOF
+RUN chmod +x /usr/local/bin/healthcheck
+
+# Set up proper signal handling for systemd
+STOPSIGNAL SIGRTMIN+3
+
+# Expose common development ports (can be overridden in compose)
+EXPOSE 3000 3001 4000 5000 5173 8000 8080 9090
+
+# Volume mount points
+VOLUME ["/sys/fs/cgroup", "/workspace"]
+
+# Health check to ensure systemd is running properly
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD ["/usr/local/bin/healthcheck"]
+
+# Default working directory
+WORKDIR /workspace
+
+# Set default shell to bash (matching original)
+SHELL ["/bin/bash", "-c"]
+
+# Start systemd as PID 1
+# Using ENTRYPOINT instead of CMD to prevent VS Code from overriding
+ENTRYPOINT ["/lib/systemd/systemd"]
+CMD []
