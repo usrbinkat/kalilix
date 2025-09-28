@@ -82,10 +82,10 @@ services:
       - apparmor:unconfined # Required for service management
 
     # Systemd requires tmpfs for runtime directories
+    # Note: /tmp removed to avoid conflict with Codespaces mounts
     tmpfs:
       - /run:exec,mode=755,size=256M,uid=0,gid=0
       - /run/lock:noexec,nosuid,nodev,mode=1777,size=64M
-      - /tmp:exec,mode=1777,size=2G
       - /run/user/1000:exec,mode=700,size=128M,uid=1000,gid=1000
 
     # Volume mounts
