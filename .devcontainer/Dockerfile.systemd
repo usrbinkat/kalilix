@@ -136,8 +136,11 @@ COPY rootfs/etc/profile.d/01-system-paths.sh /etc/profile.d/01-system-paths.sh
 COPY rootfs/etc/profile.d/02-locale-fix.sh /etc/profile.d/02-locale-fix.sh
 RUN chmod 0644 /etc/profile.d/nix-daemon-client.sh /etc/profile.d/01-system-paths.sh /etc/profile.d/02-locale-fix.sh
 
+# Create docker group if it doesn't exist
+RUN groupadd -f -g 800 docker || true
+
 # Create debian user with proper groups for development
-RUN useradd -m -s /bin/bash -u 1000 -G sudo,nixbld,systemd-journal debian
+RUN useradd -m -s /bin/bash -u 1000 -G sudo,nixbld,systemd-journal,docker debian
 
 # Set up user runtime directory for systemd user sessions
 RUN mkdir -p /run/user/1000 && \
@@ -161,12 +164,16 @@ COPY rootfs/etc/skel/.config/fish/config.fish /home/debian/.config/fish/config.f
 # Fix permissions for all user files
 RUN chown -R debian:debian /home/debian/
 
+# Copy Docker socket link service
+COPY rootfs/etc/systemd/system/docker-socket-link.service /etc/systemd/system/docker-socket-link.service
+RUN systemctl enable docker-socket-link.service
+
 # Create Kalilix initialization service
 RUN cat > /etc/systemd/system/kalilix-init.service << 'EOF'
 [Unit]
 Description=Kalilix Development Environment Initialization
-After=nix-daemon.service
-Wants=nix-daemon.service
+After=nix-daemon.service docker-socket-link.service
+Wants=nix-daemon.service docker-socket-link.service
 
 [Service]
 Type=oneshot

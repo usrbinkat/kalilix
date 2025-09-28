@@ -1,0 +1,14 @@
+[Unit]
+Description=Docker Socket Symlink for Docker-outside-of-Docker
+After=local-fs.target
+Before=kalilix-init.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'if [ -S /var/run/docker-host.sock ] && [ ! -e /var/run/docker.sock ]; then ln -sf /var/run/docker-host.sock /var/run/docker.sock; fi'
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

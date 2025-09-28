@@ -2,18 +2,23 @@
   // https://containers.dev/implementors/json_reference/#general-properties
   "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
   "name": "Kalilix Systemd Container",
-
   // Docker Compose configuration - now using systemd-based architecture
   "dockerComposeFile": "../compose.yml",
   "service": "devcontainer",
   "workspaceFolder": "/workspace/kalilix",
-
   // Critical systemd configuration - managed by compose/systemd.yml
   // "init": Controlled by compose file to ensure systemd runs as PID 1
   "shutdownAction": "stopCompose", // Proper systemd shutdown
   // Use 'forwardPorts' to make a list of ports inside the container available locally
-  "forwardPorts": [2222],
-  "portsAttributes": { "2222": { "label": "openssh-server", "onAutoForward": "notify" } },
+  "forwardPorts": [
+    2222
+  ],
+  "portsAttributes": {
+    "2222": {
+      "label": "openssh-server",
+      "onAutoForward": "notify"
+    }
+  },
   // Configure tool-specific properties
   "customizations": {
     "vscode": {
@@ -23,7 +28,7 @@
         // AI Assistants
         "github.copilot",
         "github.copilot-chat",
-	"anthropic.claude-code",
+        "anthropic.claude-code",
         // Development Tools
         "gruntfuggly.todo-tree",
         "wayou.vscode-todo-highlight",
@@ -41,19 +46,27 @@
         "terminal.integrated.profiles.linux": {
           "bash": {
             "path": "/bin/bash",
-            "args": ["-l"]
+            "args": [
+              "-l"
+            ]
           }
         },
         "editor.lineNumbers": "relative",
         "editor.formatOnSave": true,
         "editor.formatOnPaste": true,
-        "editor.rulers": [80, 120],
+        "editor.rulers": [
+          80,
+          120
+        ],
         "files.trimTrailingWhitespace": true,
         "files.insertFinalNewline": true
       }
     },
     "codespaces": {
-      "openFiles": ["README.md", "kalilix.code-workspace"],
+      "openFiles": [
+        "README.md",
+        "kalilix.code-workspace"
+      ],
       "repositories": {
         "${localEnv:PROJECT_ORG:usrbinkat}/*": {
           "permissions": "write-all"
@@ -63,7 +76,7 @@
   },
   // Run as non-root user (systemd runs as root, but VS Code connects as debian)
   "remoteUser": "debian",
-  "containerUser": "root",  // Systemd must run as root
+  "containerUser": "root", // Systemd must run as root
   // Environment variables for devcontainer
   "containerEnv": {
     // "GCM_CREDENTIAL_STORE": "plaintext"  // Commented out - using gh CLI instead of GCM
@@ -83,15 +96,14 @@
       "version": "latest"
     }
   },
-
   // Systemd container management - critical settings for systemd to work
   "overrideCommand": false, // Do NOT override systemd as PID 1
   // runArgs removed - init setting managed by compose/systemd.yml
-
   // CRITICAL: Prevent VS Code from injecting entrypoint wrapper
   // This ensures systemd runs directly as PID 1 without any shell wrapper
-  "overrideFeatureInstallOrder": false,
-
+  //"overrideFeatureInstallOrder": [
+  //  "ghcr.io/devcontainers/features/docker-outside-of-docker:1"
+  //]
   // Post-create commands to verify systemd is running
-  "postCreateCommand": "echo 'Waiting for systemd...' && sleep 5 && systemctl status --no-pager || true"
+  //"postCreateCommand": "echo 'Waiting for systemd...' && sleep 5 && systemctl status --no-pager || true"
 }
