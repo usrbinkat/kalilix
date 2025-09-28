@@ -1,0 +1,64 @@
+# Kalilix Workspace Docker Compose Configuration
+#
+# Primary Usage:
+#   docker compose up                   # Starts devcontainer (default variant)
+#   docker compose up -d                # Starts devcontainer in background
+#   docker compose down                 # Stops all services
+#
+# Service Control:
+#   docker compose ps                   # List running services
+#   docker compose logs devcontainer    # View devcontainer logs
+#   docker compose exec devcontainer bash    # Shell into running container
+#
+# Advanced Usage:
+#   docker compose build --no-cache devcontainer      # Rebuild image from scratch
+
+name: kalilix
+
+include:
+  - path: .devcontainer/compose/base.yml
+  - path: .devcontainer/compose/default.yml
+  # path: .config/docker/talos.k8s.yml
+
+networks:
+  # Primary infrastructure network for all platform services
+  kalilix: 
+    name: kalilix-workspace
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.15.0.0/24
+          gateway: 10.15.0.1
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+    labels: "com.kalilix.workspace.service"
+
+x-healthcheck-defaults: &default-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 40s
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  logging: *default-logging
+  labels:
+    com.kalilix.workspace.managed: "true"
+    com.kalilix.workspace.environment: "${ENVIRONMENT:-development}"
+# secrets:
+#   postgres_password:
+#     file: ./secrets/postgres_password.txt
+#   jwt_secret:
+#     file: ./secrets/jwt_secret.txt
+#   api_keys:
+#     file: ./secrets/api_keys.json
+
+# configs:
+#   nginx_conf:
+#     file: ./config/nginx/nginx.conf
+#   prometheus_yml:
+#     file: ./config/prometheus/prometheus.yml

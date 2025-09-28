@@ -1,0 +1,81 @@
+{
+  // https://containers.dev/implementors/json_reference/#general-properties
+  "$schema": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.schema.json",
+  "name": "Kalilix",
+
+  // Docker Compose configuration - compose.yml includes all necessary files via include directive
+  "dockerComposeFile": "../compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  // Use 'forwardPorts' to make a list of ports inside the container available locally
+  "forwardPorts": [2222],
+  "portsAttributes": { "2222": { "label": "openssh-server", "onAutoForward": "notify" } },
+  // Configure tool-specific properties
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Task automation
+        "hverlin.mise-vscode",
+        // AI Assistants
+        "github.copilot",
+        "github.copilot-chat",
+        // Development Tools
+        "gruntfuggly.todo-tree",
+        "wayou.vscode-todo-highlight",
+        "github.vscode-github-actions",
+        "github.vscode-pull-request-github",
+        "redhat.vscode-yaml",
+        // Editor Enhancements
+        "esbenp.prettier-vscode",
+        "bierner.markdown-mermaid"
+      ],
+      "settings": {
+        "window.title": "${dirty}${activeEditorShort}${separator}${rootName}",
+        "github.gitAuthentication": true,
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "args": ["-l"]
+          }
+        },
+        "editor.lineNumbers": "relative",
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true,
+        "editor.rulers": [80, 120],
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true
+      }
+    },
+    "codespaces": {
+      "openFiles": ["README.md", "kalilix.code-workspace"],
+      "repositories": {
+        "${localEnv:PROJECT_ORG:usrbinkat}/*": {
+          "permissions": "write-all"
+        }
+      }
+    }
+  },
+  // Run as non-root user
+  "remoteUser": "debian",
+  // Environment variables for devcontainer
+  "containerEnv": {
+    // "GCM_CREDENTIAL_STORE": "plaintext"  // Commented out - using gh CLI instead of GCM
+  },
+  "containerUser": "debian",
+  "updateRemoteUserUID": true,
+  // Docker-outside-of-Docker, git, and gh cli features
+  "features": {
+    // Git feature - DISABLED to prevent VS Code credential helper injection
+    // "ghcr.io/devcontainers/features/git:1": {},
+    // GitHub CLI - DISABLED for .git-credentials test
+    // "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "dockerDashComposeVersion": "none",
+      "installDockerBuildx": true,
+      "moby": false
+    }
+  },
+  // Keep container running but allow entrypoint to execute
+  "overrideCommand": true
+}

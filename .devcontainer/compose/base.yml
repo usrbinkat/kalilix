@@ -1,0 +1,90 @@
+# DevContainer base configuration
+# Provides common services and volumes for all devcontainer variants
+# Set DEVCONTAINER_VARIANT environment variable to select variant (default, nvim)
+# Note: x-anchors are defined in main compose.yml to avoid conflicts
+
+services:
+  # Volume initialization service
+  volume-init:
+    image: kalilix-devcontainer:latest
+    container_name: kalilix-volume-init
+    user: debian
+    volumes:
+      - ../../:/workspace:cached
+      - mise-data:/home/debian/.local/share/mise
+      - mise-cache:/home/debian/.cache/mise
+      - mise-config:/home/debian/.config/mise
+      - go-pkg:/go/pkg/mod
+      - go-build-cache:/home/debian/.cache/go-build
+      - cargo-registry:/home/debian/.cargo/registry
+      - cargo-git:/home/debian/.cargo/git
+      - cargo-bin:/home/debian/.cargo/bin
+      - npm-cache:/home/debian/.npm
+      - npm-global:/home/debian/.npm-global
+      - yarn-cache:/home/debian/.cache/yarn
+      - pip-cache:/home/debian/.cache/pip
+      - pip-wheels:/home/debian/.cache/pip/wheels
+      - user-config-git:/home/debian/.config/git
+      - user-config-gh:/home/debian/.config/gh
+      - bash-history-vol:/home/debian/.bash_history.d
+    environment:
+      MISE_YES: "1"
+    working_dir: /workspace
+    command: |
+      bash -c "
+        echo 'Ensuring volume permissions for debian user...'
+        # Fix volumes
+        sudo chown -R debian:debian \
+          /home/debian/.local /home/debian/.cache /home/debian/.config \
+          /home/debian/.cargo /home/debian/.npm /home/debian/.npm-global \
+          /home/debian/.bash_history.d 2>/dev/null || true
+        sudo chown -R debian:debian /go/pkg 2>/dev/null || true
+        sudo chown -R debian:debian /home/debian/.npm 2>/dev/null || true
+        echo 'Volume permissions initialized'
+
+        echo 'Checking mise installation...'
+        /home/debian/.local/bin/mise --version
+        echo 'Checking nix installation...'
+        nix --version
+        echo 'Volume init completed'
+      "
+    restart: "no" # Run once and exit
+
+# Named volumes - using driver: local for all
+volumes:
+  mise-data:
+    driver: local
+  mise-cache:
+    driver: local
+  mise-config:
+    driver: local
+  go-pkg:
+    driver: local
+  go-build-cache:
+    driver: local
+  cargo-registry:
+    driver: local
+  cargo-git:
+    driver: local
+  cargo-bin:
+    driver: local
+  npm-cache:
+    driver: local
+  npm-global:
+    driver: local
+  yarn-cache:
+    driver: local
+  pip-cache:
+    driver: local
+  pip-wheels:
+    driver: local
+  user-config-git:
+    driver: local
+  user-config-gh:
+    driver: local
+  bash-history-vol:
+    driver: local
+  apt-cache:
+    driver: local
+  apt-lists:
+    driver: local

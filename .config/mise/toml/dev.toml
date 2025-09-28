@@ -1,0 +1,441 @@
+# Development Environment Tasks
+# Language-specific development shells and utilities
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🛠️ DEVELOPMENT SHELLS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+["dev:base"]
+description = "🔧 Enter base development shell with core tools"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔧 Entering base development environment..."
+echo ""
+
+export KALILIX_SHELL="base"
+mise run nix:shell base
+'''
+
+["dev:python"]
+description = "🐍 Enter Python development environment"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🐍 Entering Python development environment..."
+echo "   Python 3.12 with uv, ruff, black, mypy"
+echo ""
+
+export KALILIX_SHELL="python"
+mise run nix:shell python
+'''
+
+["dev:go"]
+description = "🐹 Enter Go development environment"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🐹 Entering Go development environment..."
+echo "   Go 1.23 with gopls, golangci-lint, delve"
+echo ""
+
+export KALILIX_SHELL="go"
+mise run nix:shell go
+'''
+
+["dev:rust"]
+description = "🦀 Enter Rust development environment"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🦀 Entering Rust development environment..."
+echo "   Rust stable with cargo, rust-analyzer, clippy"
+echo ""
+
+export KALILIX_SHELL="rust"
+mise run nix:shell rust
+'''
+
+["dev:node"]
+description = "🟢 Enter Node.js development environment"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🟢 Entering Node.js development environment..."
+echo "   Node.js 22 with pnpm, TypeScript, ESLint"
+echo ""
+
+export KALILIX_SHELL="node"
+mise run nix:shell node
+'''
+
+["dev:devops"]
+description = "⚙️ Enter DevOps tools environment"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "⚙️ Entering DevOps environment..."
+echo "   Docker, Kubernetes, Terraform, Pulumi, Cloud CLIs"
+echo ""
+
+export KALILIX_SHELL="devops"
+mise run nix:shell devops
+'''
+
+["dev:full"]
+description = "🚀 Enter full polyglot development environment"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🚀 Entering full polyglot development environment..."
+echo "   All language environments and tools"
+echo ""
+
+export KALILIX_SHELL="full"
+mise run nix:shell full
+'''
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🔧 DEVELOPMENT UTILITIES
+# ═══════════════════════════════════════════════════════════════════════════════
+
+["dev:test"]
+description = "🧪 Run tests for current project"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🧪 Running tests..."
+echo ""
+
+# Detect project type and run appropriate tests
+if [ -f pyproject.toml ]; then
+    echo "Python project detected"
+    if command -v pytest &>/dev/null; then
+        pytest
+    elif command -v python &>/dev/null; then
+        python -m pytest
+    else
+        echo "❌ pytest not available"
+        exit 1
+    fi
+elif [ -f go.mod ]; then
+    echo "Go project detected"
+    go test ./... -v
+elif [ -f Cargo.toml ]; then
+    echo "Rust project detected"
+    cargo test
+elif [ -f package.json ]; then
+    echo "Node.js project detected"
+    if [ -f pnpm-lock.yaml ]; then
+        pnpm test
+    elif [ -f yarn.lock ]; then
+        yarn test
+    else
+        npm test
+    fi
+else
+    echo "⚠️  No recognized project type"
+    echo "   Add test configuration for your project"
+fi
+'''
+
+["dev:format"]
+description = "📝 Format code in current project"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "📝 Formatting code..."
+echo ""
+
+# Format based on project type
+if [ -f pyproject.toml ] || [ -f "*.py" ]; then
+    echo "Formatting Python code..."
+    command -v black &>/dev/null && black . || echo "  black not available"
+    command -v ruff &>/dev/null && ruff format . || echo "  ruff not available"
+fi
+
+if [ -f go.mod ]; then
+    echo "Formatting Go code..."
+    go fmt ./...
+    command -v gofumpt &>/dev/null && gofumpt -w . || true
+fi
+
+if [ -f Cargo.toml ]; then
+    echo "Formatting Rust code..."
+    cargo fmt
+fi
+
+if [ -f package.json ]; then
+    echo "Formatting JavaScript/TypeScript..."
+    if command -v prettier &>/dev/null; then
+        prettier --write "**/*.{js,jsx,ts,tsx,json,css,md}"
+    else
+        echo "  prettier not available"
+    fi
+fi
+
+# Format Nix files
+if ls *.nix &>/dev/null || ls **/*.nix &>/dev/null; then
+    echo "Formatting Nix files..."
+    command -v nixpkgs-fmt &>/dev/null && nixpkgs-fmt . || echo "  nixpkgs-fmt not available"
+fi
+
+echo ""
+echo "✅ Formatting complete!"
+'''
+
+["dev:lint"]
+description = "🔍 Lint code in current project"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔍 Linting code..."
+echo ""
+
+EXIT_CODE=0
+
+# Lint based on project type
+if [ -f pyproject.toml ] || ls *.py &>/dev/null; then
+    echo "Linting Python code..."
+    if command -v ruff &>/dev/null; then
+        ruff check . || EXIT_CODE=$?
+    fi
+    if command -v mypy &>/dev/null; then
+        mypy . || EXIT_CODE=$?
+    fi
+fi
+
+if [ -f go.mod ]; then
+    echo "Linting Go code..."
+    if command -v golangci-lint &>/dev/null; then
+        golangci-lint run || EXIT_CODE=$?
+    else
+        go vet ./... || EXIT_CODE=$?
+    fi
+fi
+
+if [ -f Cargo.toml ]; then
+    echo "Linting Rust code..."
+    cargo clippy -- -D warnings || EXIT_CODE=$?
+fi
+
+if [ -f package.json ]; then
+    echo "Linting JavaScript/TypeScript..."
+    if [ -f .eslintrc.js ] || [ -f .eslintrc.json ]; then
+        if command -v eslint &>/dev/null; then
+            eslint . || EXIT_CODE=$?
+        fi
+    fi
+fi
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo ""
+    echo "✅ Linting passed!"
+else
+    echo ""
+    echo "❌ Linting found issues"
+fi
+
+exit $EXIT_CODE
+'''
+
+["dev:check"]
+description = "✅ Run format, lint, and tests"
+depends = ["dev:format", "dev:lint", "dev:test"]
+
+["dev:watch"]
+description = "👁️ Watch for changes and run tests"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "👁️ Watching for changes..."
+echo ""
+
+# Use appropriate watcher based on project
+if [ -f Cargo.toml ]; then
+    cargo watch -x test
+elif [ -f go.mod ]; then
+    if command -v gow &>/dev/null; then
+        gow test ./...
+    else
+        echo "Install gow for Go file watching: go install github.com/mitranim/gow@latest"
+        exit 1
+    fi
+elif [ -f package.json ]; then
+    if [ -f pnpm-lock.yaml ]; then
+        pnpm run watch || pnpm test --watch
+    elif [ -f yarn.lock ]; then
+        yarn watch || yarn test --watch
+    else
+        npm run watch || npm test -- --watch
+    fi
+elif [ -f pyproject.toml ]; then
+    if command -v pytest-watch &>/dev/null; then
+        ptw
+    else
+        echo "Install pytest-watch for Python file watching"
+        exit 1
+    fi
+else
+    echo "⚠️  No watch configuration for this project type"
+fi
+'''
+
+["dev:init:python"]
+description = "🐍 Initialize Python project structure"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🐍 Initializing Python project..."
+echo ""
+
+# Create pyproject.toml if not exists
+if [ ! -f pyproject.toml ]; then
+    cat > pyproject.toml << 'EOF'
+[project]
+name = "kalilix-project"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+EOF
+    echo "✅ Created pyproject.toml"
+fi
+
+# Create virtual environment
+if [ ! -d .venv ]; then
+    echo "Creating virtual environment..."
+    python -m venv .venv
+    echo "✅ Created .venv"
+fi
+
+# Create basic structure
+mkdir -p src tests
+touch src/__init__.py tests/__init__.py
+
+echo ""
+echo "✅ Python project initialized!"
+echo "   Run 'mise run dev:python' to enter Python environment"
+'''
+
+["dev:init:go"]
+description = "🐹 Initialize Go project structure"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🐹 Initializing Go project..."
+echo ""
+
+# Initialize module if not exists
+if [ ! -f go.mod ]; then
+    read -p "Module name (e.g., github.com/user/project): " MODULE_NAME
+    go mod init "$MODULE_NAME"
+    echo "✅ Created go.mod"
+fi
+
+# Create basic structure
+mkdir -p cmd pkg internal
+
+# Create main.go if not exists
+if [ ! -f cmd/main.go ]; then
+    cat > cmd/main.go << 'EOF'
+package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello from Kalilix!")
+}
+EOF
+    echo "✅ Created cmd/main.go"
+fi
+
+echo ""
+echo "✅ Go project initialized!"
+echo "   Run 'mise run dev:go' to enter Go environment"
+'''
+
+["dev:init:rust"]
+description = "🦀 Initialize Rust project structure"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🦀 Initializing Rust project..."
+echo ""
+
+if [ ! -f Cargo.toml ]; then
+    cargo init
+    echo "✅ Rust project initialized!"
+else
+    echo "✅ Cargo.toml already exists"
+fi
+
+echo ""
+echo "   Run 'mise run dev:rust' to enter Rust environment"
+'''
+
+["dev:init:node"]
+description = "🟢 Initialize Node.js project structure"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🟢 Initializing Node.js project..."
+echo ""
+
+if [ ! -f package.json ]; then
+    cat > package.json << 'EOF'
+{
+  "name": "kalilix-project",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.js",
+    "test": "node --test",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  }
+}
+EOF
+    echo "✅ Created package.json"
+fi
+
+# Create basic structure
+mkdir -p src test
+
+if [ ! -f src/index.js ]; then
+    cat > src/index.js << 'EOF'
+console.log('Hello from Kalilix!');
+EOF
+    echo "✅ Created src/index.js"
+fi
+
+echo ""
+echo "✅ Node.js project initialized!"
+echo "   Run 'mise run dev:node' to enter Node environment"
+'''

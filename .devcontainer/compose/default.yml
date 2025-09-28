@@ -1,0 +1,128 @@
+# DevContainer default configuration
+# Standard devcontainer variant with VS Code extensions and tools
+# Note: x-anchors are defined in main compose.yml to avoid conflicts
+
+services:
+  devcontainer:
+    build:
+      context: ../../.devcontainer
+      dockerfile: Dockerfile
+      args:
+        USERNAME: debian
+        USER_UID: 1000
+        USER_GID: 1000
+    env_file:
+      - ../../.env
+    container_name: kalilix-workspace
+    hostname: projv
+    extra_hosts:
+      - "projv:127.0.1.1"
+    init: true
+    restart: unless-stopped
+    command: sleep infinity
+    user: debian
+    working_dir: /workspace
+    depends_on:
+      volume-init:
+        condition: service_completed_successfully
+    volumes:
+      # Workspace mount
+      - ../../:/workspace:cached
+      # Docker socket for Docker-outside-of-Docker
+      - /var/run/docker.sock:/var/run/docker-host.sock
+      # Tool management volumes
+      - mise-data:/home/debian/.local/share/mise
+      - mise-cache:/home/debian/.cache/mise
+      - mise-config:/home/debian/.config/mise
+      # User configuration directories
+      - user-config-git:/home/debian/.config/git
+      - user-config-gh:/home/debian/.config/gh
+      - bash-history-vol:/home/debian/.bash_history.d
+      # Git credentials mount (optional)
+      # - ${HOME}/.git-credentials:/home/debian/.git-credentials:ro
+      # SSH keys mount (optional)
+      # - ${HOME}/.ssh:/home/debian/.ssh:consistent,ro
+      # System package caches
+      - apt-cache:/var/cache/apt
+      - apt-lists:/var/lib/apt/lists
+    environment:
+      MISE_YES: "1"
+      DOCKER_BUILDKIT: "1"
+      COMPOSE_DOCKER_CLI_BUILD: "1"
+      VSCODE_CONTAINER_NAME: "Kalilix"
+    # Network configuration for Pulumi gRPC localhost binding fix
+    privileged: true
+    sysctls:
+      - net.ipv4.tcp_tw_reuse=1
+      - net.ipv4.ip_nonlocal_bind=1
+      - net.ipv6.bindv6only=0
+      # net.ipv4.ip_local_port_range=32768 60999
+    # Host network mode commented out for Pulumi gRPC compatibility
+    # Production deployments must use bridge networks with explicit port mappings
+    # network_mode: host
+    # ports:
+    #   # Common development ports - (hint: host:container)
+    #   - "2222:22"  # SSH port if needed
+    #   - "3000:3000" # React/Next.js development server
+    #   - "5173:5173" # Vite development server
+    #   - "8080:8080" # Go/general HTTP server
+    #   - "8000:8000" # Python development server
+    #   - "9090:9090" # Prometheus/monitoring
+    #   - "3001:3001" # Additional React/Node services
+    #   - "4000:4000" # General development server
+    #   - "5000:5000"   # Flask/Python services - commented out due to port conflict
+    networks:
+      kalilix:
+        ipv4_address: 10.15.0.3  # Fixed IP to avoid conflict with Talos
+    # Security configuration for development tools
+    cap_add:
+      - SYS_PTRACE      # Required for debuggers (gdb, dlv)
+      - NET_ADMIN       # Required for network tools and Talos communication
+      - NET_RAW         # Required for ping and network diagnostics
+    security_opt:
+      # seccomp:unconfined is required for development tools:
+      # - Debuggers (gdb, dlv) need syscall access for breakpoints
+      # - Strace/ltrace for system call tracing
+      # - Performance profilers (perf, pprof) require kernel access
+      # - Docker-in-Docker operations need extended syscalls
+      # Production containers should use default seccomp profile
+      - seccomp:unconfined
+      - apparmor:unconfined  # Required for Docker-in-Docker
+
+volumes:
+  mise-data:
+    driver: local
+  mise-cache:
+    driver: local
+  mise-config:
+    driver: local
+  go-pkg:
+    driver: local
+  go-build-cache:
+    driver: local
+  cargo-registry:
+    driver: local
+  cargo-git:
+    driver: local
+  cargo-bin:
+    driver: local
+  npm-cache:
+    driver: local
+  npm-global:
+    driver: local
+  yarn-cache:
+    driver: local
+  pip-cache:
+    driver: local
+  pip-wheels:
+    driver: local
+  user-config-git:
+    driver: local
+  user-config-gh:
+    driver: local
+  bash-history-vol:
+    driver: local
+  apt-cache:
+    driver: local
+  apt-lists:
+    driver: local

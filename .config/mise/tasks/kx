@@ -1,0 +1,287 @@
+#!/usr/bin/env bash
+# Kalilix CLI - Main command interface
+# Provides operational utilities for the development environment
+
+set -euo pipefail
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Configuration
+KALILIX_ROOT="${KALILIX_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../" && pwd)}"
+KALILIX_SHELL="${KALILIX_SHELL:-base}"
+KALILIX_PLATFORM="${KALILIX_PLATFORM:-}"
+
+# Utility functions
+log() {
+    echo -e "${GREEN}[KX]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1" >&2
+    exit 1
+}
+
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $1" >&2
+}
+
+info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+# Detect platform if not set
+detect_platform() {
+    if [ -z "$KALILIX_PLATFORM" ]; then
+        if [ -f /.dockerenv ] || [ -n "${container:-}" ]; then
+            KALILIX_PLATFORM="docker"
+        elif [ -n "${WSL_DISTRO_NAME:-}" ]; then
+            KALILIX_PLATFORM="wsl"
+        elif [[ "$OSTYPE" == "darwin"* ]]; then
+            KALILIX_PLATFORM="macos"
+        else
+            KALILIX_PLATFORM="linux"
+        fi
+    fi
+}
+
+# Command: info
+cmd_info() {
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║              Kalilix Environment Information                   ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+
+    detect_platform
+
+    echo "System:"
+    echo "  Platform: $KALILIX_PLATFORM"
+    echo "  Root: $KALILIX_ROOT"
+    echo "  Shell: $KALILIX_SHELL"
+    echo ""
+
+    echo "Nix:"
+    if command -v nix &>/dev/null; then
+        echo "  Version: $(nix --version)"
+        echo "  Store: $(du -sh /nix/store 2>/dev/null | cut -f1 || echo 'N/A')"
+    else
+        echo "  Status: Not installed"
+    fi
+    echo ""
+
+    echo "Docker:"
+    if command -v docker &>/dev/null; then
+        echo "  Version: $(docker --version | cut -d' ' -f3 | tr -d ',')"
+        if docker info &>/dev/null 2>&1; then
+            echo "  Daemon: Running"
+        else
+            echo "  Daemon: Not running"
+        fi
+    else
+        echo "  Status: Not available"
+    fi
+    echo ""
+
+    echo "Available Shells:"
+    if [ -f "$KALILIX_ROOT/flake.nix" ] && command -v nix &>/dev/null; then
+        nix flake show 2>/dev/null | grep devShell | sed 's/.*devShell\./  - /'
+    else
+        echo "  No flake configured"
+    fi
+}
+
+# Command: shell
+cmd_shell() {
+    local shell_name="${1:-$KALILIX_SHELL}"
+
+    log "Entering $shell_name shell..."
+
+    if [ ! -f "$KALILIX_ROOT/flake.nix" ]; then
+        error "No flake.nix found. Run setup first."
+    fi
+
+    if ! command -v nix &>/dev/null; then
+        error "Nix not installed. Run 'mise run nix:install'"
+    fi
+
+    cd "$KALILIX_ROOT"
+    case "$shell_name" in
+        base|default)
+            nix develop --impure
+            ;;
+        *)
+            nix develop ".#$shell_name" --impure
+            ;;
+    esac
+}
+
+# Command: update
+cmd_update() {
+    log "Updating Kalilix environment..."
+
+    cd "$KALILIX_ROOT"
+
+    # Update flake if exists
+    if [ -f flake.nix ]; then
+        info "Updating flake inputs..."
+        nix flake update
+    fi
+
+    # Update git repository
+    if [ -d .git ]; then
+        info "Fetching git updates..."
+        git fetch --all --tags
+    fi
+
+    log "Update complete!"
+}
+
+# Command: clean
+cmd_clean() {
+    log "Cleaning Kalilix environment..."
+
+    cd "$KALILIX_ROOT"
+
+    # Clean Nix artifacts
+    if ls result* &>/dev/null 2>&1; then
+        info "Removing Nix result links..."
+        rm -f result result-*
+    fi
+
+    # Clean direnv
+    if [ -d .direnv ]; then
+        info "Removing direnv cache..."
+        rm -rf .direnv
+    fi
+
+    # Nix garbage collection
+    if command -v nix &>/dev/null; then
+        info "Running Nix garbage collection..."
+        nix-collect-garbage
+    fi
+
+    log "Clean complete!"
+}
+
+# Command: doctor
+cmd_doctor() {
+    echo "🏥 Running Kalilix health check..."
+    echo ""
+
+    local issues=0
+
+    # Check Nix
+    if command -v nix &>/dev/null; then
+        echo "✅ Nix installed"
+    else
+        echo "❌ Nix not installed"
+        ((issues++))
+    fi
+
+    # Check flake
+    if [ -f "$KALILIX_ROOT/flake.nix" ]; then
+        echo "✅ Flake configured"
+        if [ -f "$KALILIX_ROOT/flake.lock" ]; then
+            echo "✅ Flake lock present"
+        else
+            echo "⚠️  No flake.lock (run update)"
+            ((issues++))
+        fi
+    else
+        echo "❌ No flake.nix"
+        ((issues++))
+    fi
+
+    # Check Docker
+    if command -v docker &>/dev/null; then
+        if docker info &>/dev/null 2>&1; then
+            echo "✅ Docker operational"
+        else
+            echo "⚠️  Docker daemon not running"
+        fi
+    else
+        echo "⚠️  Docker not available"
+    fi
+
+    # Check mise
+    if command -v mise &>/dev/null; then
+        echo "✅ Mise installed"
+    else
+        echo "❌ Mise not installed"
+        ((issues++))
+    fi
+
+    echo ""
+    if [ $issues -eq 0 ]; then
+        echo "✅ All checks passed!"
+    else
+        echo "⚠️  Found $issues issue(s)"
+        echo "   Run 'mise run setup' to fix"
+    fi
+}
+
+# Command: help
+cmd_help() {
+    cat << EOF
+Kalilix CLI - Development Environment Manager
+
+USAGE:
+    kx <command> [options]
+
+COMMANDS:
+    info        Show environment information
+    shell       Enter a development shell
+    update      Update flake and dependencies
+    clean       Clean build artifacts
+    doctor      Run health checks
+    help        Show this help message
+
+EXAMPLES:
+    kx info                 Show environment details
+    kx shell                Enter default shell
+    kx shell python         Enter Python shell
+    kx doctor               Check system health
+    kx clean                Clean artifacts
+
+For more commands, use: mise run help
+EOF
+}
+
+# Main dispatcher
+main() {
+    local cmd="${1:-help}"
+    shift 2>/dev/null || true
+
+    case "$cmd" in
+        info|i)
+            cmd_info "$@"
+            ;;
+        shell|sh|s)
+            cmd_shell "$@"
+            ;;
+        update|up|u)
+            cmd_update "$@"
+            ;;
+        clean|c)
+            cmd_clean "$@"
+            ;;
+        doctor|dr|d)
+            cmd_doctor "$@"
+            ;;
+        help|h|--help|-h)
+            cmd_help
+            ;;
+        *)
+            error "Unknown command: $cmd"
+            ;;
+    esac
+}
+
+# Execute if not sourced
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+    main "$@"
+fi

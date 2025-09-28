@@ -1,0 +1,196 @@
+# Main Kalilix Tasks
+# Primary entry points and commands
+
+["help"]
+description = "📚 Show Kalilix help and available tasks"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║            🚀 Kalilix Development Environment                 ║"
+echo "║         Enterprise Polyglot Development with Nix              ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+echo "Quick Start:"
+echo "  mise run setup              # 🔧 Initial setup (detect platform, install Nix)"
+echo "  mise run shell              # 🐚 Enter default development shell"
+echo "  mise run shell:python       # 🐍 Enter Python development shell"
+echo "  mise run status             # 📊 Check environment status"
+echo ""
+echo "Core Commands:"
+echo "  mise run nix:install        # 📦 Install Nix (if not present)"
+echo "  mise run nix:shell [name]   # 🐚 Enter specific Nix shell"
+echo "  mise run nix:update         # 🔄 Update flake inputs"
+echo "  mise run nix:build          # 🔨 Build current configuration"
+echo ""
+echo "Container Operations:"
+echo "  mise run docker:up          # 🐳 Start devcontainer"
+echo "  mise run docker:down        # 🛑 Stop devcontainer"
+echo "  mise run docker:shell       # 💻 Enter container shell"
+echo "  mise run docker:build       # 🏗️ Build container image"
+echo ""
+echo "Development Shells:"
+echo "  mise run dev:python         # 🐍 Python environment"
+echo "  mise run dev:go            # 🐹 Go environment"
+echo "  mise run dev:rust          # 🦀 Rust environment"
+echo "  mise run dev:node          # 🟢 Node.js environment"
+echo "  mise run dev:devops        # ⚙️ DevOps tools environment"
+echo ""
+echo "Operational:"
+echo "  mise run clean              # 🧹 Clean build artifacts"
+echo "  mise run check              # ✅ Run all checks"
+echo "  mise run format             # 📝 Format code"
+echo "  mise run test               # 🧪 Run tests"
+echo ""
+echo "Advanced:"
+echo "  mise run kx [command]       # 🎮 Kalilix CLI interface"
+echo "  mise run cache:push         # 📤 Push to binary cache"
+echo "  mise run info               # ℹ️ Show detailed environment info"
+echo ""
+echo "Environment: ${PROJECT_ENV:-development}"
+echo "Platform: ${KALILIX_PLATFORM:-detecting...}"
+echo ""
+echo "Run 'mise tasks' to see all available tasks"
+echo "Documentation: https://github.com/${PROJECT_ORG}/${PROJECT_NAME}"
+'''
+
+["setup"]
+description = "🔧 Initial Kalilix environment setup"
+depends = ["setup:detect-platform", "setup:check-requirements", "setup:install-nix", "setup:init-flake"]
+
+["status"]
+description = "📊 Show environment status"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Kalilix Environment Status"
+echo "=========================="
+echo ""
+
+# Platform detection
+if [ -f /.dockerenv ] || [ -n "${KALILIX_IN_CONTAINER:-}" ]; then
+    echo "Platform: 🐳 Container"
+    PLATFORM="docker"
+elif [ -n "${WSL_DISTRO_NAME:-}" ]; then
+    echo "Platform: 🪟 WSL"
+    PLATFORM="wsl"
+else
+    echo "Platform: 💻 Native"
+    PLATFORM="native"
+fi
+
+echo ""
+echo "Components:"
+
+# Check Nix
+if command -v nix &>/dev/null; then
+    echo "  ✅ Nix: $(nix --version)"
+else
+    echo "  ❌ Nix: Not installed (run 'mise run setup')"
+fi
+
+# Check Docker
+if command -v docker &>/dev/null; then
+    echo "  ✅ Docker: $(docker --version | cut -d' ' -f3 | tr -d ',')"
+else
+    echo "  ⚠️  Docker: Not available"
+fi
+
+# Check flake
+if [ -f flake.nix ]; then
+    echo "  ✅ Flake: Configured"
+    if [ -f flake.lock ]; then
+        echo "  ✅ Lock: Present"
+    else
+        echo "  ⚠️  Lock: Missing (run 'mise run nix:update')"
+    fi
+else
+    echo "  ❌ Flake: Not configured (run 'mise run setup:init-flake')"
+fi
+
+# Check devcontainer
+if docker ps --format 'table {{"{{.Names}}"}}' | grep -q "${COMPOSE_PROJECT_NAME}" 2>/dev/null; then
+    echo "  ✅ Container: Running"
+else
+    echo "  ⚠️  Container: Not running"
+fi
+
+echo ""
+echo "Configuration:"
+echo "  Project: ${PROJECT_NAME}"
+echo "  Organization: ${PROJECT_ORG}"
+echo "  Environment: ${PROJECT_ENV}"
+echo "  Default Shell: ${KALILIX_SHELL}"
+echo ""
+'''
+
+["shell"]
+description = "🐚 Enter default Nix development shell"
+run = '''
+#!/usr/bin/env bash
+mise run nix:shell "${KALILIX_SHELL:-base}"
+'''
+
+["shell:*"]
+description = "🐚 Enter specific Nix development shell"
+run = '''
+#!/usr/bin/env bash
+SHELL_NAME="${1:-${MISE_TASK_NAME#shell:}}"
+mise run nix:shell "$SHELL_NAME"
+'''
+
+["clean"]
+description = "🧹 Clean all build artifacts and caches"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🧹 Cleaning Kalilix build artifacts..."
+
+# Clean Nix artifacts
+if [ -d result ]; then
+    echo "  Removing Nix result links..."
+    rm -rf result result-*
+fi
+
+# Clean build directory
+if [ -d "${BUILD_DIR:-.build}" ]; then
+    echo "  Removing build directory..."
+    rm -rf "${BUILD_DIR:-.build}"
+fi
+
+# Clean direnv
+if [ -d .direnv ]; then
+    echo "  Removing direnv cache..."
+    rm -rf .direnv
+fi
+
+# Optional: Nix garbage collection
+read -p "Run Nix garbage collection? (y/N) " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    echo "  Running Nix garbage collection..."
+    nix-collect-garbage -d
+fi
+
+echo "✅ Cleanup complete!"
+'''
+
+["info"]
+description = "ℹ️ Show detailed environment information"
+run = ".config/mise/tasks/kx info"
+
+["kx"]
+description = "🎮 Kalilix CLI - main command interface"
+run = ".config/mise/tasks/kx"
+
+["kx:*"]
+description = "🎮 Run Kalilix CLI command"
+run = '''
+#!/usr/bin/env bash
+COMMAND="${MISE_TASK_NAME#kx:}"
+shift 2>/dev/null || true
+.config/mise/tasks/kx "$COMMAND" "$@"
+'''

@@ -1,0 +1,139 @@
+# Kalilix Development Environment Configuration
+# Enterprise-grade polyglot development with Nix flakes
+
+[settings]
+jobs = 4
+yes = true
+color = true
+verbose = false
+experimental = true
+task_output = "prefix"
+status.show_env = true
+activate_aggressive = false
+legacy_version_file = false
+always_keep_download = true
+task_run_auto_install = false
+not_found_auto_install = false
+auto_install = false
+trusted_config_paths = [
+  "{{ config_root }}",
+  "{{ config_root }}/.config",
+]
+
+# Task configuration variables
+[vars]
+# Project identity
+project_name = "kalilix"
+project_org = "usrbinkat"
+project_env = "development"
+
+# Platform detection (set dynamically in tasks)
+platform = "auto"  # auto, docker, native, wsl
+
+# Nix configuration
+nix_version = "2.24.10"
+nix_installer_url = "https://install.determinate.systems/nix"
+nix_channels = "nixpkgs-unstable nixos-24.05"
+
+# Container configuration
+container_name = "kalilix-workspace"
+compose_project = "kalilix"
+devcontainer_service = "devcontainer"
+
+# Development shells
+available_shells = "base python go rust node devops"
+default_shell = "base"
+
+# Binary cache configuration
+cachix_name = "kalilix"
+cache_public_key = ""  # To be configured
+
+# Feature flags
+enable_auto_update = "false"
+enable_telemetry = "false"
+enable_nix_cache = "true"
+
+# Paths (relative to project root)
+nix_config_dir = ".config/nix"
+compose_dir = ".config/docker"
+flake_dir = "."
+build_dir = ".build"
+
+# Logging
+log_level = "info"
+log_timestamp_format = "+%Y-%m-%d %H:%M:%S"
+
+# Health check thresholds
+min_nix_version = "2.24.0"
+min_docker_memory_gb = "4.0"
+min_disk_space_gb = "10"
+
+# Environment configuration
+[env]
+_.file = ".env"
+_.path = [
+  "./.config/bin",
+  "./scripts",
+  "$HOME/.nix-profile/bin",
+  "/nix/var/nix/profiles/default/bin"
+]
+
+# Core paths
+PROJECT_ROOT = "{{ config_root }}"
+KALILIX_ROOT = "{{ config_root }}"
+WORKSPACE_ROOT = "{{ config_root }}"
+
+# Project settings
+PROJECT_NAME = "{{ vars.project_name }}"
+PROJECT_ORG = "{{ vars.project_org }}"
+PROJECT_ENV = "{{ vars.project_env }}"
+
+# Nix configuration
+NIX_VERSION = "{{ vars.nix_version }}"
+NIX_CHANNELS = "{{ vars.nix_channels }}"
+FLAKE_DIR = "{{ config_root }}/{{ vars.flake_dir }}"
+
+# Binary cache
+CACHIX_NAME = "{{ vars.cachix_name }}"
+# CACHIX_AUTH_TOKEN set via environment
+
+# Container settings
+COMPOSE_PROJECT_NAME = "{{ vars.compose_project }}"
+COMPOSE_FILE = "compose.yml"
+DOCKER_BUILDKIT = "1"
+COMPOSE_DOCKER_CLI_BUILD = "1"
+
+# Development settings
+EDITOR = "nvim"
+COLORTERM = "truecolor"
+KALILIX_SHELL = "{{ vars.default_shell }}"
+
+# Platform detection (dynamically set by tasks)
+KALILIX_PLATFORM = ""
+KALILIX_IN_CONTAINER = ""
+
+# Mise configuration
+MISE_TASK_FORMAT_DEFAULT = "pretty"
+MISE_TASK_QUIET_DEFAULT = "false"
+MISE_TASK_PARALLEL_DEFAULT = "false"
+
+# Task configuration
+[task_config]
+includes = [
+  ".config/mise/toml",           # Include all TOML files
+  ".config/mise/toml/main.toml", # Nix tasks
+  ".config/mise/toml/nix.toml",  # Nix management
+  ".config/mise/toml/docker.toml", # Docker operations
+  ".config/mise/toml/dev.toml",  # Development tasks
+  ".config/mise/toml/setup.toml", # Setup and initialization
+]
+
+# Tool versions (managed by Nix, documented here for reference)
+[tools]
+# mise = "latest"  # Already a prerequisite
+# These are managed by Nix flakes, not mise:
+# python = "3.12"
+# node = "22"
+# go = "1.23"
+# rust = "stable"
+

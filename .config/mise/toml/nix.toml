@@ -1,0 +1,377 @@
+# Nix Flakes Management Tasks
+# Core Nix operations for the Kalilix development environment
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 📦 NIX PACKAGE MANAGER OPERATIONS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+["nix:install"]
+description = "📦 Install Nix package manager (platform-aware)"
+env.NIX_INSTALLER_URL = "{{ vars.nix_installer_url }}"
+env.NIX_VERSION = "{{ vars.nix_version }}"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "📦 Installing Nix package manager..."
+echo ""
+
+# Check if Nix is already installed
+if command -v nix &>/dev/null; then
+    echo "✅ Nix is already installed: $(nix --version)"
+    echo ""
+    echo "To reinstall, first run: mise run nix:uninstall"
+    exit 0
+fi
+
+# Detect platform
+if [ -f /.dockerenv ] || [ -n "${KALILIX_IN_CONTAINER:-}" ]; then
+    echo "🐳 Detected container environment"
+    PLATFORM="container"
+elif [ -n "${WSL_DISTRO_NAME:-}" ]; then
+    echo "🪟 Detected WSL environment"
+    PLATFORM="wsl"
+else
+    echo "💻 Detected native environment"
+    PLATFORM="native"
+fi
+
+# Run platform-specific installer
+${KALILIX_ROOT}/.config/mise/tasks/nix-bootstrap "$PLATFORM"
+'''
+
+["nix:uninstall"]
+description = "🗑️ Uninstall Nix package manager"
+run = '''
+#!/usr/bin/env bash
+set -uo pipefail
+
+echo "🗑️ Uninstalling Nix..."
+echo ""
+
+if [ ! -f /nix/receipt.json ]; then
+    echo "⚠️  No Nix installation receipt found"
+    echo "    Manual cleanup may be required"
+else
+    if [ -f /nix/nix-installer ]; then
+        echo "Using Determinate Systems uninstaller..."
+        /nix/nix-installer uninstall --no-confirm
+    else
+        echo "⚠️  Uninstaller not found, manual cleanup required:"
+        echo "    sudo rm -rf /nix"
+        echo "    Remove Nix entries from shell profiles"
+    fi
+fi
+'''
+
+["nix:shell"]
+description = "🐚 Enter a Nix development shell"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+SHELL_NAME="${1:-${KALILIX_SHELL:-base}}"
+
+echo "🐚 Entering Nix shell: $SHELL_NAME"
+echo ""
+
+# Check if flake exists
+if [ ! -f "${FLAKE_DIR}/flake.nix" ]; then
+    echo "❌ No flake.nix found!"
+    echo "   Run 'mise run setup:init-flake' first"
+    exit 1
+fi
+
+# Check if Nix is installed
+if ! command -v nix &>/dev/null; then
+    echo "❌ Nix is not installed!"
+    echo "   Run 'mise run nix:install' first"
+    exit 1
+fi
+
+# Enter the requested shell
+cd "$FLAKE_DIR"
+case "$SHELL_NAME" in
+    base|default)
+        nix develop --impure
+        ;;
+    *)
+        nix develop ".#$SHELL_NAME" --impure
+        ;;
+esac
+'''
+
+["nix:update"]
+description = "🔄 Update flake inputs to latest versions"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔄 Updating Nix flake inputs..."
+echo ""
+
+cd "$FLAKE_DIR"
+
+# Check if flake exists
+if [ ! -f flake.nix ]; then
+    echo "❌ No flake.nix found in $FLAKE_DIR"
+    exit 1
+fi
+
+# Update flake inputs
+echo "📥 Fetching latest input versions..."
+nix flake update
+
+# Show what changed
+echo ""
+echo "📋 Changes in flake.lock:"
+if command -v git &>/dev/null && [ -d .git ]; then
+    git diff flake.lock || true
+fi
+
+echo ""
+echo "✅ Flake inputs updated!"
+echo "   Run 'mise run nix:shell' to use updated dependencies"
+'''
+
+["nix:build"]
+description = "🔨 Build the current Nix configuration"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔨 Building Nix configuration..."
+echo ""
+
+cd "$FLAKE_DIR"
+
+# Build all outputs
+echo "Building flake outputs..."
+nix build --json | jq -r '.[].outputs | to_entries[].value' || nix build
+
+echo ""
+echo "✅ Build complete!"
+ls -la result* 2>/dev/null || echo "No result links created"
+'''
+
+["nix:develop"]
+description = "🛠️ Enter development shell with all tools"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🛠️ Entering full development environment..."
+echo ""
+
+cd "$FLAKE_DIR"
+
+# Enter development shell with all tools
+nix develop --impure --command bash -c '
+    echo "╔══════════════════════════════════════════════════════════════╗"
+    echo "║              Kalilix Development Environment                   ║"
+    echo "╚══════════════════════════════════════════════════════════════╝"
+    echo ""
+    echo "Available commands:"
+    echo "  kx          - Kalilix CLI"
+    echo "  kx-info     - Environment information"
+    echo "  kx-update   - Update dependencies"
+    echo "  kx-clean    - Clean Nix store"
+    echo ""
+    exec bash
+'
+'''
+
+["nix:gc"]
+description = "♻️ Garbage collect Nix store"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "♻️ Running Nix garbage collection..."
+echo ""
+
+# Show current store size
+echo "Current Nix store size:"
+du -sh /nix/store 2>/dev/null || echo "Unable to determine"
+echo ""
+
+# Run garbage collection
+if [ "${1:-}" = "--aggressive" ]; then
+    echo "Running aggressive garbage collection..."
+    nix-collect-garbage -d
+    nix-store --optimise
+else
+    echo "Running standard garbage collection..."
+    nix-collect-garbage
+fi
+
+echo ""
+echo "New Nix store size:"
+du -sh /nix/store 2>/dev/null || echo "Unable to determine"
+echo ""
+echo "✅ Garbage collection complete!"
+'''
+
+["nix:search"]
+description = "🔍 Search for packages in nixpkgs"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+QUERY="${1:?Usage: mise run nix:search <package>}"
+
+echo "🔍 Searching nixpkgs for: $QUERY"
+echo ""
+
+nix search nixpkgs "$QUERY" 2>/dev/null | head -50
+
+echo ""
+echo "💡 To see more results, run: nix search nixpkgs $QUERY"
+'''
+
+["nix:info"]
+description = "ℹ️ Show Nix installation information"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Nix Installation Information"
+echo "============================"
+echo ""
+
+if ! command -v nix &>/dev/null; then
+    echo "❌ Nix is not installed"
+    exit 1
+fi
+
+echo "Version: $(nix --version)"
+echo ""
+
+echo "Configuration:"
+nix show-config | head -20
+echo ""
+
+echo "Channels:"
+nix-channel --list 2>/dev/null || echo "No channels configured (using flakes)"
+echo ""
+
+echo "Flake registries:"
+nix registry list | head -10
+echo ""
+
+echo "Store path: $(nix-store --print-build-paths 2>/dev/null | head -1 | xargs dirname 2>/dev/null || echo /nix/store)"
+echo "Store size: $(du -sh /nix/store 2>/dev/null | cut -f1 || echo 'Unknown')"
+echo ""
+
+if [ -f /nix/receipt.json ]; then
+    echo "Installation receipt found:"
+    jq -r '.planner' /nix/receipt.json 2>/dev/null || cat /nix/receipt.json
+fi
+'''
+
+["nix:doctor"]
+description = "🏥 Check Nix installation health"
+run = '''
+#!/usr/bin/env bash
+set -uo pipefail
+
+echo "🏥 Running Nix health check..."
+echo ""
+
+# Check Nix command
+if command -v nix &>/dev/null; then
+    echo "✅ Nix command available: $(nix --version)"
+else
+    echo "❌ Nix command not found"
+    exit 1
+fi
+
+# Check experimental features
+if nix --version 2>&1 | grep -q "experimental"; then
+    echo "✅ Experimental features enabled"
+else
+    echo "⚠️  Experimental features may not be enabled"
+fi
+
+# Check flakes support
+if nix flake --help &>/dev/null; then
+    echo "✅ Flakes support available"
+else
+    echo "❌ Flakes support not available"
+fi
+
+# Check store
+if [ -d /nix/store ]; then
+    echo "✅ Nix store exists"
+else
+    echo "❌ Nix store not found"
+fi
+
+# Check for flake.nix
+if [ -f "${FLAKE_DIR}/flake.nix" ]; then
+    echo "✅ flake.nix present"
+
+    # Try to evaluate
+    if cd "$FLAKE_DIR" && nix flake check --impure 2>/dev/null; then
+        echo "✅ Flake evaluation successful"
+    else
+        echo "⚠️  Flake evaluation failed (may need configuration)"
+    fi
+else
+    echo "⚠️  No flake.nix found"
+fi
+
+echo ""
+echo "Overall status: Check complete"
+'''
+
+["nix:cache:enable"]
+description = "💾 Enable binary cache for faster builds"
+env.CACHIX_NAME = "{{ vars.cachix_name }}"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "💾 Configuring binary cache..."
+echo ""
+
+# Install cachix if needed
+if ! command -v cachix &>/dev/null; then
+    echo "Installing cachix..."
+    nix-env -iA cachix -f https://cachix.org/api/v1/install
+fi
+
+# Configure cache
+echo "Adding ${CACHIX_NAME} cache..."
+cachix use "$CACHIX_NAME"
+
+echo ""
+echo "✅ Binary cache configured!"
+echo "   Subsequent builds will use cached binaries when available"
+'''
+
+["nix:cache:push"]
+description = "📤 Push build results to binary cache"
+env.CACHIX_NAME = "{{ vars.cachix_name }}"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "📤 Pushing to binary cache..."
+echo ""
+
+if [ -z "${CACHIX_AUTH_TOKEN:-}" ]; then
+    echo "❌ CACHIX_AUTH_TOKEN not set"
+    echo "   Set your token to push to the cache"
+    exit 1
+fi
+
+cd "$FLAKE_DIR"
+
+# Build and push
+echo "Building and pushing to ${CACHIX_NAME}..."
+nix build --json | jq -r '.[].outputs | to_entries[].value' | cachix push "$CACHIX_NAME"
+
+echo ""
+echo "✅ Successfully pushed to cache!"
+'''

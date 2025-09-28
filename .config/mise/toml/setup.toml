@@ -1,0 +1,280 @@
+# System Health and Status Tasks
+# Repetitive checks and system maintenance for Kalilix
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🏥 SYSTEM HEALTH & STATUS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+["check"]
+description = "✅ Run all system checks"
+depends = ["check:system", "check:nix", "check:flake"]
+
+["check:system"]
+description = "💻 Check system requirements and health"
+run = '''
+#!/usr/bin/env bash
+set -uo pipefail
+
+echo "💻 System Health Check"
+echo "====================="
+echo ""
+
+HEALTH=true
+
+# Platform detection
+if [ -f /.dockerenv ] || [ -n "${container:-}" ]; then
+    echo "Platform: 🐳 Docker container"
+elif [ -n "${WSL_DISTRO_NAME:-}" ]; then
+    echo "Platform: 🪟 WSL"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "Platform: 🍎 macOS"
+else
+    echo "Platform: 🐧 Linux"
+fi
+echo ""
+
+# Check essential tools
+echo "Essential Tools:"
+command -v mise &>/dev/null && echo "  ✅ mise: $(mise --version)" || { echo "  ❌ mise: missing"; HEALTH=false; }
+command -v git &>/dev/null && echo "  ✅ git: $(git --version | cut -d' ' -f3)" || { echo "  ❌ git: missing"; HEALTH=false; }
+command -v curl &>/dev/null && echo "  ✅ curl: available" || echo "  ⚠️  curl: missing"
+command -v docker &>/dev/null && echo "  ✅ docker: $(docker --version | cut -d' ' -f3 | tr -d ',')" || echo "  ⚠️  docker: not available"
+echo ""
+
+# Check disk space
+AVAILABLE_SPACE=$(df -BG . | awk 'NR==2 {print $4}' | sed 's/G//')
+echo "Resources:"
+echo "  Disk space: ${AVAILABLE_SPACE}GB available"
+if [ "${AVAILABLE_SPACE:-0}" -lt 5 ]; then
+    echo "  ⚠️  Low disk space!"
+    HEALTH=false
+fi
+
+# Check Docker if available
+if command -v docker &>/dev/null; then
+    if docker info &>/dev/null 2>&1; then
+        echo "  Docker daemon: running"
+    else
+        echo "  Docker daemon: not running"
+    fi
+fi
+
+echo ""
+[ "$HEALTH" = true ] && echo "✅ System healthy" || echo "⚠️  Issues detected"
+'''
+
+["check:nix"]
+description = "📦 Check Nix installation and configuration"
+run = '''
+#!/usr/bin/env bash
+set -uo pipefail
+
+echo "📦 Nix Health Check"
+echo "=================="
+echo ""
+
+if ! command -v nix &>/dev/null; then
+    echo "❌ Nix not installed"
+    echo "   Run: mise run nix:install"
+    exit 1
+fi
+
+echo "Installation:"
+echo "  Version: $(nix --version)"
+
+# Check experimental features
+if nix flake --help &>/dev/null 2>&1; then
+    echo "  Flakes: enabled"
+else
+    echo "  Flakes: ⚠️  not enabled"
+fi
+
+# Check store
+if [ -d /nix/store ]; then
+    STORE_SIZE=$(du -sh /nix/store 2>/dev/null | cut -f1 || echo "unknown")
+    echo "  Store: ${STORE_SIZE}"
+else
+    echo "  Store: ⚠️  not found"
+fi
+
+# Check binary caches
+echo ""
+echo "Binary caches:"
+nix show-config 2>/dev/null | grep -E "substituters|trusted-public-keys" | head -4 || echo "  Default configuration"
+
+echo ""
+echo "✅ Nix operational"
+'''
+
+["check:flake"]
+description = "❄️ Validate flake configuration"
+run = '''
+#!/usr/bin/env bash
+set -uo pipefail
+
+echo "❄️ Flake Validation"
+echo "=================="
+echo ""
+
+if [ ! -f flake.nix ]; then
+    echo "❌ No flake.nix found"
+    echo "   Create one or copy from templates"
+    exit 1
+fi
+
+echo "Checking flake..."
+if nix flake check --impure 2>&1 | tail -5; then
+    echo ""
+    echo "✅ Flake valid"
+else
+    echo ""
+    echo "❌ Flake has errors"
+    exit 1
+fi
+
+# Show available shells
+echo ""
+echo "Available shells:"
+nix flake show 2>/dev/null | grep devShell | sed 's/.*devShell\./  - /' || echo "  Unable to list"
+'''
+
+["update"]
+description = "🔄 Update all dependencies"
+depends = ["update:flake", "update:docker"]
+
+["update:flake"]
+description = "🔄 Update Nix flake inputs"
+run = "mise run nix:update"
+
+["update:docker"]
+description = "🔄 Update Docker base images"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+    mise run docker:pull
+else
+    echo "Docker not available, skipping"
+fi
+'''
+
+["format"]
+description = "📝 Format all code"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "📝 Formatting code..."
+echo ""
+
+# Format Nix files
+if ls *.nix &>/dev/null 2>&1 || ls **/*.nix &>/dev/null 2>&1; then
+    if command -v nixpkgs-fmt &>/dev/null; then
+        echo "Formatting Nix files..."
+        nixpkgs-fmt .
+    else
+        echo "nixpkgs-fmt not available, skipping Nix formatting"
+    fi
+fi
+
+# Run project-specific formatters if in a development shell
+mise run dev:format 2>/dev/null || true
+
+echo ""
+echo "✅ Formatting complete"
+'''
+
+["lint"]
+description = "🔍 Lint all code"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔍 Linting code..."
+echo ""
+
+EXIT_CODE=0
+
+# Check Nix files
+if ls *.nix &>/dev/null 2>&1 || ls **/*.nix &>/dev/null 2>&1; then
+    if command -v nixpkgs-fmt &>/dev/null; then
+        echo "Checking Nix formatting..."
+        nixpkgs-fmt --check . || EXIT_CODE=$?
+    fi
+fi
+
+# Run project-specific linters if available
+mise run dev:lint 2>/dev/null || true
+
+if [ $EXIT_CODE -eq 0 ]; then
+    echo ""
+    echo "✅ Linting passed"
+else
+    echo ""
+    echo "❌ Linting issues found"
+fi
+
+exit $EXIT_CODE
+'''
+
+["test"]
+description = "🧪 Run tests"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🧪 Running tests..."
+echo ""
+
+# Run flake checks
+if [ -f flake.nix ]; then
+    echo "Running flake checks..."
+    nix flake check --impure || exit 1
+fi
+
+# Run project tests if available
+mise run dev:test 2>/dev/null || echo "No project tests configured"
+
+echo ""
+echo "✅ Tests complete"
+'''
+
+["setup"]
+description = "🔧 Ensure environment is ready"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🔧 Setting up Kalilix environment..."
+echo ""
+
+# Install Nix if needed
+if ! command -v nix &>/dev/null; then
+    echo "Installing Nix..."
+    .config/mise/tasks/nix-bootstrap
+fi
+
+# Ensure flake exists
+if [ ! -f flake.nix ]; then
+    echo "❌ No flake.nix found"
+    echo "   Please create a flake.nix or copy from templates"
+    exit 1
+fi
+
+# Update flake lock if missing
+if [ ! -f flake.lock ]; then
+    echo "Creating flake.lock..."
+    nix flake update
+fi
+
+# Setup direnv if available
+if command -v direnv &>/dev/null && [ ! -f .envrc ]; then
+    echo "Setting up direnv..."
+    echo "use flake . --impure" > .envrc
+    direnv allow .
+fi
+
+echo ""
+mise run status
+'''

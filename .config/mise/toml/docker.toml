@@ -1,0 +1,364 @@
+# Docker Container Operations
+# Container management for Kalilix development environment
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🐳 DOCKER CONTAINER MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════════════
+
+["docker:up"]
+description = "🚀 Start the Kalilix devcontainer"
+env.COMPOSE_PROJECT_NAME = "{{ vars.compose_project }}"
+env.CONTAINER_NAME = "{{ vars.container_name }}"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🚀 Starting Kalilix devcontainer..."
+echo ""
+
+# Check if Docker is running
+if ! docker info &>/dev/null; then
+    echo "❌ Docker is not running!"
+    echo "   Please start Docker Desktop or the Docker daemon"
+    exit 1
+fi
+
+# Check if already running
+if docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+    echo "✅ Container is already running"
+    echo ""
+    echo "To enter the container, run: mise run docker:shell"
+    exit 0
+fi
+
+# Start services
+echo "Starting services..."
+docker compose up -d
+
+# Wait for container to be ready
+echo ""
+echo "⏳ Waiting for container to be ready..."
+sleep 3
+
+# Verify container is running
+if docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+    echo ""
+    echo "✅ Container started successfully!"
+    echo ""
+    echo "To enter the container:"
+    echo "  mise run docker:shell"
+    echo ""
+    echo "To view logs:"
+    echo "  mise run docker:logs"
+else
+    echo "❌ Container failed to start"
+    echo "   Check logs with: docker compose logs"
+    exit 1
+fi
+'''
+
+["docker:down"]
+description = "🛑 Stop the Kalilix devcontainer"
+env.COMPOSE_PROJECT_NAME = "{{ vars.compose_project }}"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🛑 Stopping Kalilix devcontainer..."
+echo ""
+
+docker compose down
+
+echo ""
+echo "✅ Container stopped"
+echo ""
+echo "Note: Volumes are preserved for quick restart"
+echo "To remove volumes, run: mise run docker:clean"
+'''
+
+["docker:restart"]
+description = "🔄 Restart the devcontainer"
+depends = ["docker:down", "docker:up"]
+
+["docker:shell"]
+description = "💻 Enter the devcontainer shell"
+env.CONTAINER_NAME = "{{ vars.container_name }}"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Check if container is running
+if ! docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+    echo "⚠️  Container is not running"
+    echo "   Starting container..."
+    mise run docker:up
+fi
+
+echo "💻 Entering Kalilix container..."
+echo ""
+
+# Execute shell in container
+docker compose exec -it devcontainer bash -l
+'''
+
+["docker:build"]
+description = "🏗️ Build the devcontainer image"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🏗️ Building Kalilix devcontainer image..."
+echo ""
+
+# Build with Docker Compose
+docker compose build --progress=plain devcontainer
+
+echo ""
+echo "✅ Image built successfully!"
+echo "   Run 'mise run docker:up' to start the container"
+'''
+
+["docker:rebuild"]
+description = "♻️ Rebuild container from scratch"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "♻️ Rebuilding Kalilix devcontainer..."
+echo ""
+
+# Stop if running
+if docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+    echo "Stopping running container..."
+    docker compose down
+fi
+
+# Rebuild without cache
+echo "Building image without cache..."
+docker compose build --no-cache --progress=plain devcontainer
+
+echo ""
+echo "✅ Container rebuilt!"
+echo "   Run 'mise run docker:up' to start"
+'''
+
+["docker:logs"]
+description = "📜 View devcontainer logs"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "📜 Kalilix Container Logs"
+echo "========================"
+echo ""
+echo "Press Ctrl+C to exit"
+echo ""
+
+docker compose logs -f devcontainer
+'''
+
+["docker:status"]
+description = "📊 Check container status"
+env.CONTAINER_NAME = "{{ vars.container_name }}"
+env.COMPOSE_PROJECT_NAME = "{{ vars.compose_project }}"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "📊 Docker Container Status"
+echo "========================="
+echo ""
+
+# Check Docker daemon
+if docker info &>/dev/null; then
+    echo "✅ Docker daemon: Running"
+else
+    echo "❌ Docker daemon: Not running"
+    exit 1
+fi
+echo ""
+
+# Check container
+echo "Container Status:"
+if docker ps -a --format "table {{.Names}}\t{{.Status}}" | grep "$CONTAINER_NAME"; then
+    # Container exists
+    if docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+        echo ""
+        echo "✅ Container is running"
+
+        # Show resource usage
+        echo ""
+        echo "Resource Usage:"
+        docker stats --no-stream "$CONTAINER_NAME"
+    else
+        echo ""
+        echo "⚠️  Container exists but is stopped"
+    fi
+else
+    echo "  No container found"
+fi
+echo ""
+
+# Check image
+echo "Image Status:"
+if docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}" | grep "${COMPOSE_PROJECT_NAME}"; then
+    docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" | head -1
+    docker images --format "table {{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}" | grep "${COMPOSE_PROJECT_NAME}"
+else
+    echo "  No image built yet"
+fi
+echo ""
+
+# Check volumes
+echo "Volumes:"
+docker volume ls --format "table {{.Name}}\t{{.Driver}}" | grep "${COMPOSE_PROJECT_NAME}" || echo "  No volumes created"
+echo ""
+
+# Check network
+echo "Network:"
+docker network ls --format "table {{.Name}}\t{{.Driver}}" | grep "${COMPOSE_PROJECT_NAME}" || echo "  No network created"
+'''
+
+["docker:exec"]
+description = "🎯 Execute command in container"
+env.CONTAINER_NAME = "{{ vars.container_name }}"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ $# -eq 0 ]; then
+    echo "Usage: mise run docker:exec -- <command>"
+    echo "Example: mise run docker:exec -- ls -la"
+    exit 1
+fi
+
+# Check if container is running
+if ! docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
+    echo "❌ Container is not running"
+    echo "   Run 'mise run docker:up' first"
+    exit 1
+fi
+
+# Execute command
+docker compose exec devcontainer "$@"
+'''
+
+["docker:clean"]
+description = "🧹 Remove container, image, and volumes"
+env.COMPOSE_PROJECT_NAME = "{{ vars.compose_project }}"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🧹 Cleaning Docker resources..."
+echo ""
+echo "⚠️  This will remove:"
+echo "  - Container"
+echo "  - Image"
+echo "  - Volumes (including data)"
+echo "  - Network"
+echo ""
+
+read -p "Are you sure? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Cancelled"
+    exit 0
+fi
+
+echo ""
+echo "Cleaning resources..."
+
+# Stop and remove containers
+docker compose down -v
+
+# Remove images
+echo "Removing images..."
+docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep "${COMPOSE_PROJECT_NAME}" | awk '{print $2}' | xargs -r docker rmi -f 2>/dev/null || true
+
+echo ""
+echo "✅ Docker resources cleaned!"
+echo "   Run 'mise run docker:build' to rebuild"
+'''
+
+["docker:pull"]
+description = "⬇️ Pull latest base images"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "⬇️ Pulling latest base images..."
+echo ""
+
+# Extract base image from Dockerfile
+BASE_IMAGE=$(grep "^FROM" .devcontainer/Dockerfile | head -1 | awk '{print $2}')
+
+if [ -n "$BASE_IMAGE" ] && [ "$BASE_IMAGE" != "debian" ]; then
+    echo "Pulling $BASE_IMAGE..."
+    docker pull "$BASE_IMAGE"
+else
+    echo "Pulling debian:bookworm..."
+    docker pull debian:bookworm
+fi
+
+echo ""
+echo "✅ Base images updated!"
+echo "   Run 'mise run docker:rebuild' to rebuild with new base"
+'''
+
+["docker:prune"]
+description = "🗑️ Prune unused Docker resources"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "🗑️ Pruning unused Docker resources..."
+echo ""
+
+echo "This will remove:"
+echo "  - Stopped containers"
+echo "  - Unused networks"
+echo "  - Dangling images"
+echo "  - Build cache"
+echo ""
+
+read -p "Continue? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Cancelled"
+    exit 0
+fi
+
+echo ""
+docker system prune -af
+
+echo ""
+echo "✅ Docker resources pruned!"
+'''
+
+["docker:compose:validate"]
+description = "✅ Validate Docker Compose configuration"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "✅ Validating Docker Compose configuration..."
+echo ""
+
+if docker compose config >/dev/null 2>&1; then
+    echo "✅ Compose configuration is valid"
+    echo ""
+    echo "Services defined:"
+    docker compose config --services | sed 's/^/  - /'
+    echo ""
+    echo "Networks:"
+    docker compose config --format json | jq -r '.networks | keys[]' | sed 's/^/  - /'
+    echo ""
+    echo "Volumes:"
+    docker compose config --format json | jq -r '.volumes | keys[]' | sed 's/^/  - /'
+else
+    echo "❌ Compose configuration has errors"
+    docker compose config
+    exit 1
+fi
+'''
