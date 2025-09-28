@@ -49,7 +49,7 @@ services:
       BUILDKIT_PROGRESS: plain
 
       # Kalilix environment
-      KALILIX_ROOT: /workspace
+      KALILIX_ROOT: /workspace/kalilix
       KALILIX_PLATFORM: systemd-container
       KALILIX_SHELL: "${KALILIX_SHELL:-base}"
 
@@ -58,7 +58,7 @@ services:
       MISE_CONFIG_DIR: /home/debian/.config/mise
       MISE_CACHE_DIR: /home/debian/.cache/mise
       MISE_STATE_DIR: /home/debian/.local/state/mise
-      MISE_TRUSTED_CONFIG_PATHS: /workspace
+      MISE_TRUSTED_CONFIG_PATHS: /workspace/kalilix
       MISE_EXPERIMENTAL: "1"
       MISE_YES: "1"
 
@@ -94,7 +94,7 @@ services:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
 
       # Workspace mount with optimal caching
-      - ../../:/workspace:cached
+      - ../../:/workspace/kalilix:cached
 
       # Docker socket for Docker-outside-of-Docker
       - /var/run/docker.sock:/var/run/docker-host.sock
@@ -165,7 +165,7 @@ services:
 
     # User configuration
     user: root  # Systemd must start as root, services run as debian
-    working_dir: /workspace
+    working_dir: /workspace/kalilix
 
     # Restart policy
     restart: unless-stopped

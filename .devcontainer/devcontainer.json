@@ -6,7 +6,7 @@
   // Docker Compose configuration - now using systemd-based architecture
   "dockerComposeFile": "../compose.yml",
   "service": "devcontainer",
-  "workspaceFolder": "/workspace",
+  "workspaceFolder": "/workspace/kalilix",
 
   // Critical systemd configuration - managed by compose/systemd.yml
   // "init": Controlled by compose file to ensure systemd runs as PID 1

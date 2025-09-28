@@ -161,10 +161,6 @@ COPY rootfs/etc/skel/.config/fish/config.fish /home/debian/.config/fish/config.f
 # Fix permissions for all user files
 RUN chown -R debian:debian /home/debian/
 
-# Create workspace directory
-RUN mkdir -p /workspace && \
-    chown -R debian:debian /workspace
-
 # Create Kalilix initialization service
 RUN cat > /etc/systemd/system/kalilix-init.service << 'EOF'
 [Unit]
@@ -176,7 +172,7 @@ Wants=nix-daemon.service
 Type=oneshot
 RemainAfterExit=yes
 User=debian
-WorkingDirectory=/workspace
+WorkingDirectory=/workspace/kalilix
 Environment="PATH=/nix/var/nix/profiles/default/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 # NIX_REMOTE not set here - only for user sessions via profile.d
 ExecStartPre=/bin/bash -c 'until systemctl is-active nix-daemon.service; do sleep 1; done'
@@ -184,8 +180,8 @@ ExecStart=/bin/bash -c '\
     echo "🚀 Initializing Kalilix environment..." && \
     echo "Platform: Container (systemd)" && \
     echo "Nix: Multi-user daemon mode" && \
-    if [ -f /workspace/.mise.toml ]; then \
-    echo "Workspace: Mounted at /workspace"; \
+    if [ -f /workspace/kalilix/.mise.toml ]; then \
+    echo "Workspace: Mounted at /workspace/kalilix"; \
     fi && \
     echo "✅ Kalilix ready!"'
 
@@ -266,7 +262,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
     CMD ["/usr/local/bin/healthcheck"]
 
 # Default working directory
-WORKDIR /workspace
+WORKDIR /workspace/kalilix
 
 # Set default shell to bash (matching original)
 SHELL ["/bin/bash", "-c"]

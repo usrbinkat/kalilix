@@ -87,7 +87,7 @@ fi
 # All nix commands work natively through the daemon socket
 
 # Kalilix environment
-export KALILIX_ROOT="/workspace"
+export KALILIX_ROOT="/workspace/kalilix"
 export KALILIX_SHELL="${KALILIX_SHELL:-base}"
 
 # Kalilix aliases
