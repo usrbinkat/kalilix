@@ -1,0 +1,56 @@
+{
+  "mcpServers": {
+    "github": {
+      "type": "stdio",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=github_pat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {}
+    },
+    "git": {
+      "type": "stdio",
+      "command": "mcp-server-git",
+      "args": [
+        "--repository",
+        "."
+      ],
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "perplexity": {
+      "type": "stdio",
+      "command": "mcp-server-perplexity-ask",
+      "args": [],
+      "env": {
+        "PERPLEXITY_API_KEY": "pplx-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+      }
+    },
+    "fetch": {
+      "type": "stdio",
+      "command": "mcp-server-fetch",
+      "args": [],
+      "env": {}
+    },
+    "deepwiki": {
+      "type": "http",
+      "url": "https://mcp.deepwiki.com/mcp"
+    },
+    "pulumi": {
+      "type": "stdio",
+      "command": "pulumi-mcp-server",
+      "args": ["stdio"],
+      "env": {
+        "PULUMI_ACCESS_TOKEN": "pul-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+        "PULUMI_HOME": "/home/debian/.pulumi",
+        "HOME": "/home/debian"
+      }
+    }
+  }
+}

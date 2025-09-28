@@ -7,6 +7,9 @@ let
     inherit (pkgs.stdenv.hostPlatform) system;
     nodejs = pkgs.nodejs_22;  # Override to use Node.js 22 LTS
   };
+
+  # Import the wrapped pulumi-mcp-server that handles cache directories properly
+  pulumiMcpServerWrapped = import ../packages/npm/pulumi-mcp-wrapper.nix { inherit pkgs; };
 in
 pkgs.mkShell {
   name = "kalilix-base";
@@ -15,7 +18,8 @@ pkgs.mkShell {
     # npm packages from node2nix
     npmPkgs."@anthropic-ai/claude-code"
     npmPkgs."server-perplexity-ask"
-    npmPkgs."@pulumi/mcp-server"
+    # Use the wrapped version of pulumi-mcp-server that handles cache directories
+    pulumiMcpServerWrapped
 
     # Locale support
     glibcLocales
