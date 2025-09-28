@@ -1,8 +1,8 @@
 { pkgs, lib, inputs }:
 
 let
-  # Import Claude Code package from node2nix
-  claudeCodePkgs = import ../packages/claude-code {
+  # Import npm packages from node2nix
+  npmPkgs = import ../packages/npm {
     inherit pkgs;
     inherit (pkgs.stdenv.hostPlatform) system;
     nodejs = pkgs.nodejs_22;  # Override to use Node.js 22 LTS
@@ -11,13 +11,15 @@ in
 pkgs.mkShell {
   name = "kalilix-base";
 
-  packages = with pkgs; [
-    # Claude Code - AI assistant (from node2nix)
-    claudeCodePkgs."@anthropic-ai/claude-code-1.0.80"
-    
+  buildInputs = with pkgs; [
+    # npm packages from node2nix
+    npmPkgs."@anthropic-ai/claude-code"
+    npmPkgs."server-perplexity-ask"
+    npmPkgs."@pulumi/mcp-server"
+
     # Locale support
     glibcLocales
-    
+
     # Core tools
     git
     gh
@@ -47,6 +49,7 @@ pkgs.mkShell {
     nix-tree
     nix-diff
     cachix
+    nodePackages.node2nix
 
     # System tools
     htop
@@ -63,7 +66,7 @@ pkgs.mkShell {
     # Set up locale archive path for Nix environments
     # This provides the locale data within the Nix shell
     export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
-    
+
     # Fix locale settings - use C.UTF-8 which is always available
     # This prevents setlocale warnings in containers
     export LANG=C.UTF-8
@@ -71,7 +74,7 @@ pkgs.mkShell {
     export LC_COLLATE=C.UTF-8
     # Unset LC_ALL to avoid conflicts
     unset LC_ALL 2>/dev/null || true
-    
+
     # Load .env if exists
     [ -f .env ] && source .env
 
@@ -109,7 +112,7 @@ pkgs.mkShell {
     KALILIX_SHELL = "base";
     EDITOR = "vim";
     PAGER = "bat";
-    
+
     # Locale settings - point to Nix's locale archive
     LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
     LANG = "C.UTF-8";

@@ -1,0 +1,125 @@
+* [0;1mlegacyPackages.x86_64-linux.aks-[32;1mmcp[0;1m-server[0m (0.0.9)
+  Model Context Protocol server for Azure Kubernetes Service
+
+* [0;1mlegacyPackages.x86_64-linux.buttplug-[32;1mmcp[0;1m[0m (0.0.1)
+  Buttplug.io Model Context Protocol ([32;1mMCP[0m) Server
+
+* [0;1mlegacyPackages.x86_64-linux.chat[32;1mmcp[0;1m[0m (0.0.76)
+  AI chat client implementing the Model Context Protocol
+
+* [0;1mlegacyPackages.x86_64-linux.fluxcd-operator-[32;1mmcp[0;1m[0m (0.27.0)
+  Kubernetes controller for managing the lifecycle of Flux CD
+
+* [0;1mlegacyPackages.x86_64-linux.fomp[0m (1.2.4)
+  LV2 port of the [32;1mMCP[0m, VCO, FIL, and WAH plugins by Fons Adriaensen
+
+* [0;1mlegacyPackages.x86_64-linux.gitea-[32;1mmcp[0;1m-server[0m (0.4.0)
+  Gitea Model Context Protocol ([32;1mMCP[0m) Server
+
+* [0;1mlegacyPackages.x86_64-linux.github-[32;1mmcp[0;1m-server[0m (0.15.0)
+  GitHub's official [32;1mMCP[0m Server
+
+* [0;1mlegacyPackages.x86_64-linux.haskellPackages.[32;1mmcp[0;1m[0m (0.2.0.1)
+  A Haskell implementation of the Model Context Protocol ([32;1mMCP[0m)
+
+* [0;1mlegacyPackages.x86_64-linux.haskellPackages.[32;1mmcp[0;1m-server[0m (0.1.0.14)
+  Library for building Model Context Protocol ([32;1mMCP[0m) servers
+
+* [0;1mlegacyPackages.x86_64-linux.haskellPackages.[32;1mmcp[0;1mi[0m (0.0.1.2)
+  Connect to MineCraft running on a Raspberry PI
+
+* [0;1mlegacyPackages.x86_64-linux.haskellPackages.pty-[32;1mmcp[0;1m-server[0m (0.0.5.0)
+  pty-[32;1mmcp[0m-server
+
+* [0;1mlegacyPackages.x86_64-linux.home-assistant-component-tests.[32;1mmcp[0;1m[0m (2025.9.4)
+  Open source home automation that puts local control and privacy first
+
+* [0;1mlegacyPackages.x86_64-linux.home-assistant-component-tests.[32;1mmcp[0;1m_server[0m (2025.9.4)
+  Open source home automation that puts local control and privacy first
+
+* [0;1mlegacyPackages.x86_64-linux.libxd[32;1mmcp[0;1m[0m (1.1.5)
+  X Display Manager Control Protocol library
+
+* [0;1mlegacyPackages.x86_64-linux.[32;1mmcp[0;1m-grafana[0m (0.7.0)
+  [32;1mMCP[0m server for Grafana
+
+* [0;1mlegacyPackages.x86_64-linux.[32;1mmcp[0;1m-k8s-go[0m (0.5.0)
+  [32;1mMCP[0m server connecting to Kubernetes
+
+* [0;1mlegacyPackages.x86_64-linux.[32;1mmcp[0;1m-nixos[0m (1.0.1)
+  [32;1mMCP[0m server for NixOS
+
+* [0;1mlegacyPackages.x86_64-linux.[32;1mmcp[0;1m-proxy[0m (0.8.2)
+  [32;1mMCP[0m server which proxies other [32;1mMCP[0m servers from stdio to SSE or from SSE to stdio
+
+* [0;1mlegacyPackages.x86_64-linux.[32;1mmcp[0;1melauncher-client[0m (1.4.0-qt6)
+  Unofficial Minecraft Bedrock Edition launcher with CLI
+
+* [0;1mlegacyPackages.x86_64-linux.[32;1mmcp[0;1melauncher-ui-qt[0m (1.4.0-qt6)
+  Unofficial Minecraft Bedrock Edition launcher with GUI
+
+* [0;1mlegacyPackages.x86_64-linux.[32;1mmcp[0;1mhost[0m (0.19.2)
+  CLI host application that enables Large Language Models (LLMs) to interact with external tools through the Model Context Protocol ([32;1mMCP[0m)
+
+* [0;1mlegacyPackages.x86_64-linux.[32;1mmcp[0;1mp[0m (2.7.2.2)
+  Matsui's C preprocessor
+
+* [0;1mlegacyPackages.x86_64-linux.my[32;1mmcp[0;1mlus[0m (3.0.5)
+  PlayStation 2 memory card manager
+
+* [0;1mlegacyPackages.x86_64-linux.nu[32;1mmcp[0;1mp[0m (2.14.2)
+  Templatized Header Only C++ Implementation of the Python NumPy Library
+
+* [0;1mlegacyPackages.x86_64-linux.ocamlPackages.bigstringaf[0m (0.10.0)
+  Bigstring intrinsics and fast blits based on me[32;1mmcp[0my/memmove
+
+* [0;1mlegacyPackages.x86_64-linux.playwright-[32;1mmcp[0;1m[0m (0.0.34)
+  Playwright [32;1mMCP[0m server
+
+* [0;1mlegacyPackages.x86_64-linux.python312Packages.django-[32;1mmcp[0;1m-server[0m (0.5.6)
+  Django [32;1mMCP[0m Server implementation
+
+* [0;1mlegacyPackages.x86_64-linux.python312Packages.docling-[32;1mmcp[0;1m[0m (1.2.0)
+  Making docling agentic through [32;1mMCP[0m
+
+* [0;1mlegacyPackages.x86_64-linux.python312Packages.fastapi-[32;1mmcp[0;1m[0m (0.4.0)
+  Expose your FastAPI endpoints as Model Context Protocol ([32;1mMCP[0m) tools, with Auth
+
+* [0;1mlegacyPackages.x86_64-linux.python312Packages.fast[32;1mmcp[0;1m[0m (2.11.3)
+  Fast, Pythonic way to build [32;1mMCP[0m servers and clients
+
+* [0;1mlegacyPackages.x86_64-linux.python312Packages.[32;1mmcp[0;1m[0m (1.14.0)
+  Official Python SDK for Model Context Protocol servers and clients
+
+* [0;1mlegacyPackages.x86_64-linux.python312Packages.[32;1mmcp[0;1madapt[0m (0.1.16)
+  [32;1mMCP[0m servers tool
+
+* [0;1mlegacyPackages.x86_64-linux.python313Packages.django-[32;1mmcp[0;1m-server[0m (0.5.6)
+  Django [32;1mMCP[0m Server implementation
+
+* [0;1mlegacyPackages.x86_64-linux.python313Packages.docling-[32;1mmcp[0;1m[0m (1.2.0)
+  Making docling agentic through [32;1mMCP[0m
+
+* [0;1mlegacyPackages.x86_64-linux.python313Packages.fastapi-[32;1mmcp[0;1m[0m (0.4.0)
+  Expose your FastAPI endpoints as Model Context Protocol ([32;1mMCP[0m) tools, with Auth
+
+* [0;1mlegacyPackages.x86_64-linux.python313Packages.fast[32;1mmcp[0;1m[0m (2.11.3)
+  Fast, Pythonic way to build [32;1mMCP[0m servers and clients
+
+* [0;1mlegacyPackages.x86_64-linux.python313Packages.[32;1mmcp[0;1m[0m (1.14.0)
+  Official Python SDK for Model Context Protocol servers and clients
+
+* [0;1mlegacyPackages.x86_64-linux.python313Packages.[32;1mmcp[0;1madapt[0m (0.1.16)
+  [32;1mMCP[0m servers tool
+
+* [0;1mlegacyPackages.x86_64-linux.terraform-[32;1mmcp[0;1m-server[0m (0.3.0)
+  Terraform Model Context Protocol ([32;1mMCP[0m) Server
+
+* [0;1mlegacyPackages.x86_64-linux.vscode-extensions.s[32;1mmcp[0;1meak.default-keys-windows[0m (1.0.0)
+  VSCode extension that provides default Windows keybindings on any platform
+
+* [0;1mlegacyPackages.x86_64-linux.x[32;1mmcp[0;1m[0m (0-unstable-2020-10-10)
+  Tiny color picker for X11
+
+* [0;1mlegacyPackages.x86_64-linux.xorg.libXd[32;1mmcp[0;1m[0m (1.1.5)
+  X Display Manager Control Protocol library

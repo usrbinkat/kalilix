@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Generate Nix expressions for Claude Code npm package
-# This creates deterministic, reproducible Nix derivations
+# Generate Nix expressions for npm packages
+# This creates deterministic, reproducible Nix derivations for all npm dependencies
 
 set -euo pipefail
 
-echo "Generating node2nix expressions for Claude Code..."
+echo "Generating node2nix expressions for npm packages..."
 
 # Use node2nix to generate the Nix expressions
 # Using Node.js 18 (latest supported by node2nix 1.11.0)

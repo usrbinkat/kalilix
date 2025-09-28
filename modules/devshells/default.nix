@@ -8,7 +8,7 @@ let
   extendShell = name: config:
     base.overrideAttrs (old: {
       name = "kalilix-${name}";
-      packages = old.packages ++ config.packages;
+      buildInputs = old.buildInputs ++ config.packages;
       shellHook = old.shellHook + "\n" + config.shellHook;
       env = old.env // config.env // { KALILIX_SHELL = name; };
     });
@@ -20,21 +20,44 @@ in {
   # Python development
   python = extendShell "python" {
     packages = with pkgs; [
-      python312
-      python312Packages.pip
-      python312Packages.ipython
-      python312Packages.pytest
-      python312Packages.black
-      python312Packages.mypy
+      (unstable.python312.withPackages (ps: [
+        ps.pip
+        ps.ipython
+        ps.pytest
+        ps.black
+        ps.mypy
+        # MCP packages
+        ps.mcp  # Official Python SDK for Model Context Protocol
+        ps.fastmcp  # Fast, Pythonic way to build MCP servers
+        ps.mcpadapt  # MCP servers tool
+        ps.django-mcp-server  # Django MCP Server
+        ps.fastapi-mcp  # FastAPI MCP integration
+      ]))
       ruff
       uv
     ];
 
     shellHook = ''
       echo "🐍 Python 3.12 Development Environment"
-      [ ! -d .venv ] && echo "Creating virtual environment..." && uv venv
-      source .venv/bin/activate 2>/dev/null || true
+
+      # Create venv if it doesn't exist
+      if [ ! -d .venv ]; then
+        echo "Creating virtual environment..."
+        uv venv
+      fi
+
+      # Always activate venv
+      source .venv/bin/activate
+
+      # Install MCP servers if not already installed
+      if ! command -v mcp-server-git &>/dev/null; then
+        echo "Installing MCP servers..."
+        uv pip install -q mcp-server-git mcp-server-fetch 2>/dev/null || true
+      fi
+
+      # Install from requirements/pyproject if exists
       [ -f pyproject.toml ] && uv sync 2>/dev/null || true
+      [ -f requirements.txt ] && uv pip install -q -r requirements.txt 2>/dev/null || true
     '';
 
     env = {
@@ -125,7 +148,6 @@ in {
 
       # IaC
       pulumi-bin
-      terraform
       ansible
 
       # Cloud CLIs
@@ -136,6 +158,13 @@ in {
       # Security
       trivy
       cosign
+
+      # MCP servers (from unstable)
+      unstable.github-mcp-server  # GitHub's official MCP Server
+      unstable.gitea-mcp-server  # Gitea MCP Server
+      unstable.mcp-k8s-go  # MCP server for Kubernetes
+      unstable.aks-mcp-server  # Azure Kubernetes Service MCP
+      unstable.mcp-grafana  # MCP server for Grafana
     ];
 
     shellHook = ''
@@ -152,22 +181,57 @@ in {
   full = extendShell "full" {
     packages = with pkgs; [
       # Combine all language tools
-      python312
+      (unstable.python312.withPackages (ps: [
+        ps.pip
+        ps.ipython
+        ps.pytest
+        ps.black
+        ps.mypy
+        # MCP packages
+        ps.mcp
+        ps.fastmcp
+        ps.mcpadapt
+        ps.django-mcp-server
+        ps.fastapi-mcp
+      ]))
       go_1_23
       nodejs_22
       (rust-bin.stable.latest.default.override {
         extensions = [ "rust-src" "rust-analyzer" ];
       })
+      ruff
+      uv
 
       # Additional tools
       docker-client
       kubectl
-      terraform
+      pulumi-bin
+
+      # MCP servers
+      unstable.github-mcp-server
+      unstable.mcp-k8s-go
     ];
 
     shellHook = ''
       echo "🚀 Full Polyglot Development Environment"
       echo "   All language toolchains loaded"
+
+      # Setup Python venv with MCP servers
+      if [ ! -d .venv ]; then
+        echo "Creating Python virtual environment..."
+        uv venv
+      fi
+      source .venv/bin/activate
+
+      # Install MCP servers if not already installed
+      if ! command -v mcp-server-git &>/dev/null; then
+        echo "Installing MCP servers..."
+        uv pip install -q mcp-server-git mcp-server-fetch 2>/dev/null || true
+      fi
+
+      # Install from requirements/pyproject if exists
+      [ -f pyproject.toml ] && uv sync 2>/dev/null || true
+      [ -f requirements.txt ] && uv pip install -q -r requirements.txt 2>/dev/null || true
     '';
 
     env = {
