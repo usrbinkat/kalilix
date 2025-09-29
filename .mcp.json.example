@@ -48,8 +48,7 @@
       "args": ["stdio"],
       "env": {
         "PULUMI_ACCESS_TOKEN": "pul-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "PULUMI_HOME": "/home/debian/.pulumi",
-        "HOME": "/home/debian"
+        "HOME": "/workspaces/kalilix"
       }
     }
   }
