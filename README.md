@@ -129,6 +129,38 @@ nix develop .#python
 
 Simply open the repository in Codespaces - everything auto-initializes via the devcontainer configuration.
 
+#### Option 4: Remote Flake Access (No Clone Required)
+
+Access development shells directly from GitHub without cloning:
+
+```bash
+# GitHub flake reference (preferred - uses GitHub API)
+nix develop github:usrbinkat/kalilix#full
+nix develop github:usrbinkat/kalilix#python
+
+# Specific branch or commit
+nix develop github:usrbinkat/kalilix/main#go
+nix develop github:usrbinkat/kalilix/8ddd42b#rust
+
+# Git protocol
+nix develop git+https://github.com/usrbinkat/kalilix#devops
+
+# Tarball from releases/archive
+nix develop https://github.com/usrbinkat/kalilix/archive/refs/heads/main.tar.gz#node
+```
+
+**Advantages:**
+- Zero disk space for source code (until first use)
+- Always uses latest commit (or pinned version)
+- Perfect for quick testing or CI/CD environments
+- Binary caches still apply for fast downloads
+
+**Add to flake registry for short names:**
+```bash
+nix registry add kalilix github:usrbinkat/kalilix
+nix develop kalilix#python  # Now use short name
+```
+
 ---
 
 ## Development Shells
