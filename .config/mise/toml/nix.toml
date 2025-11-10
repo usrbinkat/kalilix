@@ -31,9 +31,12 @@ if [ -f /.dockerenv ] || [ -n "${KALILIX_IN_CONTAINER:-}" ]; then
 elif [ -n "${WSL_DISTRO_NAME:-}" ]; then
     echo "🪟 Detected WSL environment"
     PLATFORM="wsl"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "🍎 Detected macOS"
+    PLATFORM="macos"
 else
-    echo "💻 Detected native environment"
-    PLATFORM="native"
+    echo "💻 Detected native Linux"
+    PLATFORM="linux"
 fi
 
 # Run platform-specific installer
@@ -286,47 +289,142 @@ else
     exit 1
 fi
 
-# Check experimental features
-if nix --version 2>&1 | grep -q "experimental"; then
-    echo "✅ Experimental features enabled"
-else
-    echo "⚠️  Experimental features may not be enabled"
+# Verify experimental features are enabled
+if ! grep -q "experimental-features.*nix-command.*flakes" /etc/nix/nix.conf 2>/dev/null && \
+   ! grep -q "experimental-features.*nix-command.*flakes" ~/.config/nix/nix.conf 2>/dev/null; then
+    echo "❌ Experimental features not enabled - run 'mise run nix:cache:configure'"
+    exit 1
 fi
+echo "✅ Experimental features enabled (nix-command flakes)"
 
-# Check flakes support
-if nix flake --help &>/dev/null; then
-    echo "✅ Flakes support available"
-else
+# Verify flakes support works
+if ! nix flake --help &>/dev/null 2>&1; then
     echo "❌ Flakes support not available"
+    exit 1
 fi
+echo "✅ Flakes support available"
 
-# Check store
-if [ -d /nix/store ]; then
-    echo "✅ Nix store exists"
-else
+# Verify store exists
+if [ ! -d /nix/store ]; then
     echo "❌ Nix store not found"
+    exit 1
+fi
+echo "✅ Nix store exists"
+
+# Check for flake.nix first
+if [ ! -f "${FLAKE_DIR}/flake.nix" ]; then
+    echo "❌ No flake.nix found"
+    exit 1
+fi
+echo "✅ flake.nix present"
+
+# Wait for nix-daemon to be fully ready and responsive
+if command -v systemctl &>/dev/null; then
+    echo "Waiting for nix-daemon to be ready..."
+    for i in {1..30}; do
+        if systemctl is-active --quiet nix-daemon 2>/dev/null; then
+            # Daemon is active, now test if it's responsive
+            if nix store ping --store daemon 2>/dev/null; then
+                echo "✅ Nix daemon is active and responsive"
+                break
+            fi
+        fi
+        sleep 1
+    done
 fi
 
-# Check for flake.nix
-if [ -f "${FLAKE_DIR}/flake.nix" ]; then
-    echo "✅ flake.nix present"
+# Give daemon a moment to fully initialize
+sleep 2
 
-    # Try to evaluate
-    if cd "$FLAKE_DIR" && nix flake check --impure 2>/dev/null; then
-        echo "✅ Flake evaluation successful"
-    else
-        echo "⚠️  Flake evaluation failed (may need configuration)"
-    fi
+# Verify flake evaluates successfully
+echo "Validating flake configuration..."
+if cd "$FLAKE_DIR" && nix flake check --impure 2>&1 | tee /tmp/flake-check.log; then
+    echo "✅ Flake evaluation successful"
 else
-    echo "⚠️  No flake.nix found"
+    echo "❌ Flake evaluation failed"
+    echo "Error output:"
+    cat /tmp/flake-check.log
+    exit 1
 fi
 
 echo ""
 echo "Overall status: Check complete"
 '''
 
+["nix:cache:configure"]
+description = "💾 Configure Lix/Nix binary caches"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "💾 Configuring Lix binary caches..."
+echo ""
+
+# Ensure Nix is installed
+if ! command -v nix &>/dev/null; then
+    echo "❌ Nix/Lix not installed. Run 'mise run nix:install' first."
+    exit 1
+fi
+
+# Create Nix configuration directory
+mkdir -p ~/.config/nix
+
+# Configure nix.conf - minimal config, let flake.nix provide caches/keys
+cat > ~/.config/nix/nix.conf <<'EOF'
+# Kalilix Lix/Nix Configuration
+# Minimal user config - flake.nix provides substituters and keys via nixConfig
+
+# Experimental Features (Flakes + nix-command)
+experimental-features = nix-command flakes
+
+# Trust flake-provided configuration (caches, keys, build settings)
+accept-flake-config = true
+
+# Optimization
+auto-optimise-store = true
+warn-dirty = false
+allow-import-from-derivation = true
+EOF
+
+echo "✅ Nix user configuration created"
+echo "   Location: ~/.config/nix/nix.conf"
+echo "   Flake config: Trusted (flake.nix provides caches and keys)"
+echo ""
+
+# Configure current user as trusted in system-wide config
+if command -v sudo &>/dev/null; then
+    CURRENT_USER="${USER}"
+    echo "🔐 Adding current user ($CURRENT_USER) to trusted-users..."
+
+    # Check if already configured
+    if sudo grep -q "^trusted-users.*$CURRENT_USER" /etc/nix/nix.conf 2>/dev/null; then
+        echo "   Already configured as trusted user"
+    else
+        # Add trusted-users line if it doesn't exist
+        if ! sudo grep -q "^trusted-users" /etc/nix/nix.conf 2>/dev/null; then
+            echo "trusted-users = root $CURRENT_USER" | sudo tee -a /etc/nix/nix.conf >/dev/null
+        else
+            # Append to existing trusted-users line (portable across GNU and BSD sed)
+            sudo sh -c "sed 's/^trusted-users =.*/& '$CURRENT_USER'/' /etc/nix/nix.conf > /etc/nix/nix.conf.tmp && mv /etc/nix/nix.conf.tmp /etc/nix/nix.conf"
+        fi
+        echo "   ✅ Added $CURRENT_USER to trusted-users"
+
+        # Restart daemon (systemd on Linux, launchd on macOS)
+        if command -v systemctl &>/dev/null && systemctl is-active --quiet nix-daemon 2>/dev/null; then
+            echo "   🔄 Restarting nix-daemon (systemd)..."
+            sudo systemctl restart nix-daemon
+            echo "   ✅ Nix daemon restarted"
+        elif command -v launchctl &>/dev/null && sudo launchctl list | grep -q org.nixos.nix-daemon 2>/dev/null; then
+            echo "   🔄 Restarting nix-daemon (launchd)..."
+            sudo launchctl kickstart -k system/org.nixos.nix-daemon
+            echo "   ✅ Nix daemon restarted"
+        fi
+    fi
+fi
+'''
+
 ["nix:cache:enable"]
-description = "💾 Enable binary cache for faster builds"
+description = "💾 Enable project-specific binary cache (Cachix)"
 env.CACHIX_NAME = "{{ vars.cachix_name }}"
 run = '''
 #!/usr/bin/env bash

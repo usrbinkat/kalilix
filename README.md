@@ -38,6 +38,7 @@ Kalilix employs a layered architecture designed for flexibility and reliability:
 
 ### Core Technologies
 
+- **Lix**: Community-maintained Nix fork with improved error messages and modern features (version 2.93.0)
 - **Nix Flakes**: Provides deterministic package management and system configuration
 - **Systemd**: Enables proper service management within containerized environments
 - **Mise**: Orchestrates development tasks and workflow automation
@@ -49,6 +50,32 @@ Kalilix employs a layered architecture designed for flexibility and reliability:
 ### Prerequisites
 
 Kalilix requires minimal initial setup. The system will bootstrap itself with all necessary dependencies.
+
+#### Quick Bootstrap (Recommended)
+
+For first-time setup on any platform:
+
+```bash
+# Clone the repository
+git clone https://github.com/usrbinkat/kalilix.git
+cd kalilix
+
+# Run the automated bootstrap
+mise run bootstrap
+```
+
+The bootstrap process will:
+1. Install Lix/Nix package manager for your platform
+2. Configure binary caches for faster package downloads
+3. Add your user to trusted-users for seamless operation
+4. Validate the flake configuration
+5. Set up experimental features (flakes, nix-command)
+
+**Supported Platforms:**
+- **macOS** (Intel and Apple Silicon) - uses launchd for daemon management
+- **Linux** (Ubuntu, Debian, Fedora, Arch, openSUSE) - uses systemd multi-user daemon
+- **WSL** (Windows Subsystem for Linux) - auto-detects systemd availability
+- **Containers** (Docker, Podman) - optimized for containerized environments
 
 #### Native Installation (macOS/Linux/WSL)
 
@@ -123,6 +150,9 @@ mise tasks
 # Show detailed help
 mise run help
 
+# Bootstrap complete environment (first-time setup)
+mise run bootstrap
+
 # System information and status
 mise run info
 
@@ -136,10 +166,36 @@ mise run status
 ### Task Categories
 
 - **Setup Tasks**: Initialize and configure environments
+- **Bootstrap Tasks**: Automated Lix/Nix installation and configuration
 - **Development Tasks**: Build, test, and debug workflows
 - **Nix Tasks**: Manage flakes and packages
 - **Docker Tasks**: Container and compose operations
 - **Maintenance Tasks**: System cleanup and updates
+
+### Nix-Specific Tasks
+
+```bash
+# Install Nix/Lix (auto-detects platform)
+mise run nix:install
+
+# Configure binary caches and trusted users
+mise run nix:cache:configure
+
+# Run health checks on Nix installation
+mise run nix:doctor
+
+# Update flake inputs to latest versions
+mise run nix:update
+
+# Garbage collect unused packages
+mise run nix:gc
+
+# Search for packages in nixpkgs
+mise run nix:search <package>
+
+# Enter a specific development shell
+mise run nix:shell python
+```
 
 ## MCP Integration
 
@@ -170,7 +226,12 @@ kalilix/
 │   └── packages/           # Custom package definitions
 ├── .config/                # Configuration files
 │   ├── mise/               # Mise task definitions
+│   │   ├── toml/          # Task configuration files
+│   │   └── tasks/         # Executable task scripts
 │   └── nix/                # Nix-specific configuration
+├── kubevirt/               # KubeVirt VM testing manifests
+│   ├── kalilix-userdata.yaml          # Cloud-init configuration
+│   └── ubuntu-kalilix-flake-minimal.yaml  # VM specification
 └── scripts/                # Utility and helper scripts
 ```
 
@@ -187,6 +248,13 @@ PROJECT_ENV=development
 
 # Development shell selection
 KALILIX_SHELL=base  # Options: base, python, go, rust, node, devops, full
+
+# Platform override (auto-detected by default)
+KALILIX_PLATFORM=auto  # Options: auto, linux, macos, wsl, container
+
+# Nix/Lix configuration
+NIX_VERSION=2.93.0
+NIX_INSTALLER_URL=https://install.lix.systems/lix
 
 # Feature flags
 KALILIX_AUTO_UPDATE=false
@@ -211,6 +279,29 @@ nix develop .#python --override-input nixpkgs github:NixOS/nixpkgs/<commit>
 nix develop --impure --expr 'import ./flake.nix { overlays = [ ./my-overlay.nix ]; }'
 ```
 
+### Binary Cache Configuration
+
+Kalilix uses a minimal user configuration approach where `flake.nix` serves as the single source of truth for binary caches and public keys:
+
+```bash
+# User configuration (automatically created by bootstrap)
+~/.config/nix/nix.conf:
+  experimental-features = nix-command flakes
+  accept-flake-config = true
+  auto-optimise-store = true
+
+# Flake configuration (single source of truth)
+flake.nix nixConfig:
+  extra-substituters = [
+    "https://cache.nixos.org"
+    "https://nix-community.cachix.org"
+    "https://devenv.cachix.org"
+  ]
+  extra-trusted-public-keys = [ ... ]
+```
+
+This approach eliminates configuration duplication and ensures cache settings are version-controlled with the flake.
+
 ### Container Customization
 
 The systemd-enabled devcontainer supports advanced configurations:
@@ -229,11 +320,14 @@ Kalilix implements several strategies to minimize overhead and maximize performa
 Pre-built packages are cached to eliminate compilation time:
 
 ```bash
-# Configure Cachix (optional)
+# Configure via mise (automatically sets accept-flake-config)
+mise run nix:cache:configure
+
+# Or manually configure Cachix for project-specific cache
 cachix use kalilix
 
-# Or use the included binary caches
-nix develop --option binary-caches "https://cache.nixos.org https://nix-community.cachix.org"
+# Cache settings come from flake.nix nixConfig
+# No need to specify URLs manually
 ```
 
 ### Persistent Volumes
@@ -286,11 +380,45 @@ Kalilix prioritizes security while maintaining development flexibility:
 **Nix daemon not responding**
 
 ```bash
-# Restart the Nix daemon in containers
+# Linux: Restart systemd daemon
 sudo systemctl restart nix-daemon
-
-# Verify daemon status
 systemctl status nix-daemon
+
+# macOS: Restart launchd daemon
+sudo launchctl kickstart -k system/org.nixos.nix-daemon
+```
+
+**Experimental features not enabled**
+
+```bash
+# Run cache configuration to enable features
+mise run nix:cache:configure
+
+# Verify configuration
+grep experimental-features ~/.config/nix/nix.conf
+```
+
+**Flake evaluation fails**
+
+```bash
+# Run comprehensive health check
+mise run nix:doctor
+
+# Check flake syntax
+nix flake check --impure
+
+# View detailed evaluation errors
+nix flake check --impure --show-trace
+```
+
+**Untrusted user warnings**
+
+```bash
+# Re-run cache configuration to add user to trusted-users
+mise run nix:cache:configure
+
+# Manually verify
+sudo grep trusted-users /etc/nix/nix.conf
 ```
 
 **Locale warnings**
@@ -327,15 +455,62 @@ docker compose logs devcontainer
 journalctl -xef  # Within container
 ```
 
+### Platform-Specific Troubleshooting
+
+**macOS: sed compatibility issues**
+
+The bootstrap uses portable `sed` syntax that works with both GNU sed (Linux) and BSD sed (macOS). If you encounter sed-related errors, ensure you're running the latest version from the repository.
+
+**WSL: systemd not available**
+
+The bootstrap auto-detects systemd availability in WSL. For WSL2 with systemd support, ensure your `/etc/wsl.conf` contains:
+
+```ini
+[boot]
+systemd=true
+```
+
+## Testing and Validation
+
+### Automated VM Testing
+
+Kalilix includes KubeVirt manifests for automated testing on Kubernetes:
+
+```bash
+# Create SSH key secret
+kubectl create secret generic kargo-sshpubkey-kali \
+  --from-file=key1=$HOME/.ssh/id_ed25519.pub
+
+# Create cloud-init userdata secret
+kubectl create secret generic kalilix-userdata \
+  --from-file=userdata=kubevirt/kalilix-userdata.yaml
+
+# Deploy test VM
+kubectl apply -f kubevirt/ubuntu-kalilix-flake-minimal.yaml
+
+# Monitor bootstrap progress
+kubectl get vmi kalilix -o jsonpath='{.status.interfaces[0].ipAddress}'
+ssh kali@<VM_IP>
+tail -f /var/log/cloud-init-output.log
+```
+
+The cloud-init configuration automatically:
+1. Installs mise
+2. Clones the repository
+3. Runs `mise run bootstrap`
+4. Prebuilds the full development shell
+5. Configures shell profiles for immediate use
+
 ## Contributing
 
 Kalilix welcomes contributions that align with its philosophy of zero technical debt and state-of-the-art implementation. Before contributing:
 
-1. Ensure changes maintain cross-platform compatibility
+1. Ensure changes maintain cross-platform compatibility (macOS, Linux, WSL)
 2. Follow the existing architectural patterns
 3. Include appropriate Nix expressions for new packages
 4. Test across multiple development shells
 5. Document any new environment variables or configuration options
+6. Use conventional commit format (lowercase, no attribution)
 
 ### Development Workflow
 
@@ -352,6 +527,9 @@ mise run test
 # Verify Nix expressions
 nix flake check
 
+# Run health checks
+mise run nix:doctor
+
 # Commit with conventional commit format
 git commit -m "feat: add new security tool integration"
 ```
@@ -364,8 +542,10 @@ Kalilix fully supports macOS on both Intel and Apple Silicon:
 
 - Automatic architecture detection for native packages
 - Rosetta 2 fallback for x86-only tools
-- Integration with Homebrew when needed
+- Integration with Homebrew when needed (< 5% usage)
 - Docker Desktop compatibility for container workflows
+- Launchd daemon management (auto-configured by bootstrap)
+- BSD sed compatibility in all automation
 
 ### WSL
 
@@ -375,6 +555,18 @@ Windows Subsystem for Linux provides near-native Linux experience:
 - Automatic Windows path integration
 - Docker Desktop WSL2 backend support
 - VS Code Remote-WSL extension compatible
+- Auto-detects systemd availability for daemon configuration
+
+### Linux
+
+Native Linux distributions are fully supported:
+
+- **Ubuntu 24.04** - Validated with automated cloud-init testing
+- **Debian 13** - Full compatibility expected
+- **Fedora 43** - DNF-based, systemd multi-user daemon
+- **Arch Linux** - Rolling release support
+- **openSUSE** - Zypper-based distributions
+- All use systemd for nix-daemon management
 
 ### NixOS
 
@@ -399,6 +591,7 @@ Kalilix continues to evolve toward comprehensive security and development enviro
 - Enhanced MCP server integrations
 - Improved caching strategies
 - Additional language ecosystems
+- Cross-platform validation on all supported platforms
 
 ### Long Term
 
@@ -415,6 +608,8 @@ This project exists at the intersection of security operations, software develop
 
 By building on Nix's foundation of reproducible, declarative system configuration, Kalilix provides not just a collection of tools, but a framework for thinking about development environments as code. This approach enables teams to share not just code, but entire working environments, complete with tools, configurations, and dependencies.
 
+The project's adoption of Lix (a community-maintained Nix fork) reflects its commitment to community-driven development and modern error messaging that makes the Nix ecosystem more accessible to newcomers while maintaining the same rigorous reproducibility guarantees.
+
 ## License
 
 Kalilix is open source software. Specific licensing information will be added as the project stabilizes. Individual tools and packages maintain their original licenses.
@@ -423,9 +618,9 @@ Kalilix is open source software. Specific licensing information will be added as
 
 Kalilix builds upon the exceptional work of numerous open source communities:
 
-- The Nix and NixOS communities for revolutionary package management
+- The Lix and NixOS communities for revolutionary package management
 - Kali Linux maintainers for curating security tools
-- Determinate Systems for reliable Nix installers
+- The Mise project for elegant task orchestration
 - The broader open source security community
 
 ---

@@ -55,6 +55,35 @@ echo "Run 'mise tasks' to see all available tasks"
 echo "Documentation: https://github.com/${PROJECT_ORG}/${PROJECT_NAME}"
 '''
 
+["bootstrap"]
+description = "🚀 Bootstrap complete Lix/Nix environment"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "╔══════════════════════════════════════════════════════════════╗"
+echo "║        Kalilix Bootstrap - Nix-First Multi-Platform          ║"
+echo "╚══════════════════════════════════════════════════════════════╝"
+echo ""
+
+# Install Lix/Nix (uses existing nix-bootstrap script)
+mise run nix:install
+
+# Configure binary caches
+mise run nix:cache:configure
+
+# Verify installation
+mise run nix:doctor
+
+echo ""
+echo "✅ Bootstrap complete!"
+echo ""
+echo "Next steps:"
+echo "  mise run status              # Check environment"
+echo "  nix develop                  # Enter dev shell"
+echo "  mise run nix:shell python    # Enter Python dev shell"
+'''
+
 ["setup"]
 description = "🔧 Initial Kalilix environment setup"
 depends = ["setup:detect-platform", "setup:check-requirements", "setup:install-nix", "setup:init-flake"]

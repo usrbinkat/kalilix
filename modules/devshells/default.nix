@@ -163,7 +163,6 @@ in {
       unstable.github-mcp-server  # GitHub's official MCP Server
       unstable.gitea-mcp-server  # Gitea MCP Server
       unstable.mcp-k8s-go  # MCP server for Kubernetes
-      unstable.aks-mcp-server  # Azure Kubernetes Service MCP
       unstable.mcp-grafana  # MCP server for Grafana
     ];
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Nix Bootstrap - Platform-aware Nix installer
-# Handles Nix installation for containers, native Linux, macOS, and WSL
+# Nix Bootstrap - Platform-aware Lix installer
+# Handles Lix/Nix installation for containers, native Linux, macOS, and WSL
 
 set -euo pipefail
 
 # Configuration
-NIX_INSTALLER_URL="${NIX_INSTALLER_URL:-https://install.determinate.systems/nix}"
+NIX_INSTALLER_URL="${NIX_INSTALLER_URL:-https://install.lix.systems/lix}"
 PLATFORM="${1:-auto}"
 
 # Colors for output
@@ -64,75 +64,73 @@ detect_platform() {
 
 # Install for container environment (Docker/Podman)
 install_container() {
-    log "Installing Nix for container environment..."
+    log "Installing Lix for container environment..."
     echo ""
-    info "Using Determinate Systems installer with container settings"
+    info "Lix installer - using linux planner for containers"
 
-    # Container-specific flags:
-    # --init none: No init system (systemd) in container
-    # --extra-conf "sandbox = false": Disable sandboxing for container compatibility
-    # --no-confirm: Non-interactive installation
     curl --proto '=https' --tlsv1.2 -sSf -L "$NIX_INSTALLER_URL" | sh -s -- install linux \
-        --init none \
-        --extra-conf "sandbox = false" \
+        --no-confirm \
         --extra-conf "experimental-features = nix-command flakes" \
         --extra-conf "max-jobs = auto" \
-        --extra-conf "cores = 0" \
-        --extra-conf "trusted-users = root $USER" \
-        --no-confirm
+        --extra-conf "cores = 0"
 
     # Source Nix profile
     export PATH="${PATH}:/nix/var/nix/profiles/default/bin"
 
-    warn "Container installation complete!"
-    warn "Note: Only root or sudo users can run Nix in container mode"
-    echo ""
-    echo "Add to your shell profile:"
-    echo "  export PATH=\"\${PATH}:/nix/var/nix/profiles/default/bin\""
+    log "✅ Container installation complete!"
 }
 
 # Install for WSL environment
 install_wsl() {
-    log "Installing Nix for WSL environment..."
+    log "Installing Lix for WSL environment..."
     echo ""
 
     # Check if systemd is available
     if systemctl --version &>/dev/null 2>&1; then
-        info "WSL with systemd detected, using standard Linux installation"
-        install_linux
+        info "WSL with systemd detected"
     else
-        info "WSL without systemd detected, using init-less installation"
-        warn "Only single-user mode will be available"
-
-        curl --proto '=https' --tlsv1.2 -sSf -L "$NIX_INSTALLER_URL" | sh -s -- install linux \
-            --init none \
-            --extra-conf "experimental-features = nix-command flakes" \
-            --no-confirm
+        info "WSL without systemd detected"
     fi
+
+    # Lix installer - use linux subcommand for WSL
+    curl --proto '=https' --tlsv1.2 -sSf -L "$NIX_INSTALLER_URL" | sh -s -- install linux \
+        --no-confirm \
+        --extra-conf "experimental-features = nix-command flakes" \
+        --extra-conf "max-jobs = auto" \
+        --extra-conf "cores = 0"
+
+    log "✅ WSL installation complete!"
 }
 
 # Install for native Linux
 install_linux() {
-    log "Installing Nix for Linux..."
+    log "Installing Lix for Linux..."
     echo ""
-    info "Using Determinate Systems installer with multi-user mode"
+    info "Lix installer with multi-user daemon mode"
 
-    curl --proto '=https' --tlsv1.2 -sSf -L "$NIX_INSTALLER_URL" | sh -s -- install \
-        --determinate \
+    curl --proto '=https' --tlsv1.2 -sSf -L "$NIX_INSTALLER_URL" | sh -s -- install linux \
+        --no-confirm \
         --extra-conf "experimental-features = nix-command flakes" \
-        --no-confirm
+        --extra-conf "max-jobs = auto" \
+        --extra-conf "cores = 0"
+
+    log "✅ Linux installation complete!"
 }
 
 # Install for macOS
 install_macos() {
-    log "Installing Nix for macOS..."
+    log "Installing Lix for macOS..."
     echo ""
-    info "Using Determinate Systems installer for macOS"
+    info "Using Lix installer with multi-user daemon"
 
-    curl --proto '=https' --tlsv1.2 -sSf -L "$NIX_INSTALLER_URL" | sh -s -- install \
-        --determinate \
+    # macOS uses the 'macos' subcommand
+    curl --proto '=https' --tlsv1.2 -sSf -L "$NIX_INSTALLER_URL" | sh -s -- install macos \
+        --no-confirm \
         --extra-conf "experimental-features = nix-command flakes" \
-        --no-confirm
+        --extra-conf "max-jobs = auto" \
+        --extra-conf "cores = 0"
+
+    log "✅ macOS installation complete!"
 }
 
 # Verify installation
@@ -151,16 +149,24 @@ verify_installation() {
     export PATH="${PATH}:/nix/var/nix/profiles/default/bin"
 
     if command -v nix &>/dev/null; then
-        log "✅ Nix installed successfully!"
+        NIX_VERSION=$(nix --version)
+        log "✅ Lix installed successfully!"
         echo ""
-        echo "Version: $(nix --version)"
+        echo "Version: $NIX_VERSION"
+
+        # Check if it's actually Lix
+        if echo "$NIX_VERSION" | grep -qi "lix"; then
+            log "✅ Using Lix (Nix community fork)"
+        else
+            warn "⚠️  Using CppNix instead of Lix"
+        fi
         echo ""
 
         # Test flakes
         if nix flake --help &>/dev/null 2>&1; then
             log "✅ Flakes enabled"
         else
-            warn "⚠️  Flakes not fully enabled"
+            warn "⚠️  Flakes not enabled"
         fi
 
         # Show receipt location if exists
@@ -175,7 +181,7 @@ verify_installation() {
 # Main installation flow
 main() {
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║              Nix Bootstrap Installer                           ║"
+    echo "║          Lix Bootstrap Installer (Nix Fork)                   ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo ""
 

@@ -1,0 +1,194 @@
+---
+# Minimal Ubuntu 24.04 VM with Automated Kalilix Bootstrap
+# Uses cloud-init to automatically install mise and bootstrap Kalilix flake
+#
+# Quick Deployment:
+# ==================
+# 1. Create SSH public key secret:
+#    kubectl create secret generic kargo-sshpubkey-kali \
+#      --from-file=key1=$HOME/.ssh/id_ed25519.pub \
+#      --namespace=default
+#
+# 2. Create cloud-init userdata secret:
+#    kubectl create secret generic kalilix-userdata \
+#      --from-file=userdata=kubevirt/kalilix-userdata.yaml \
+#      --namespace=default
+#
+# 3. Deploy the VirtualMachine:
+#    kubectl apply -f kubevirt/ubuntu-kalilix-flake-minimal.yaml
+#
+# 4. Monitor VM startup:
+#    kubectl get vm,vmi,dv,pvc -l app=kalilix
+#
+# 5. Get VM IP address:
+#    kubectl get vmi kalilix -o jsonpath='{.status.interfaces[0].ipAddress}'
+#
+# 6. Connect via SSH:
+#    ssh kali@<VM_IP>
+#
+# 7. Verify Kalilix installation (once cloud-init completes):
+#    tail -f /var/log/cloud-init-output.log  # Watch bootstrap progress
+#    mise run status                          # Check environment status
+#    nix develop                              # Enter development shell
+#
+# Cleanup:
+# ========
+# kubectl delete vm kalilix
+# kubectl delete pvc kalilix-root
+# kubectl delete dv kalilix-root
+#
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: kalilix
+  namespace: default
+  labels:
+    app: kalilix
+    os: ubuntu
+    version: "24.04"
+    role: development
+  annotations:
+    description: "Minimal Ubuntu 24.04 with automated Kalilix Nix flake bootstrap"
+spec:
+  # Automatically start the VM
+  runStrategy: Always
+
+  # DataVolume for persistent root disk
+  dataVolumeTemplates:
+    - metadata:
+        name: kalilix-root
+      spec:
+        pvc:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 64Gi
+          storageClassName: hostpath-provisioner
+        source:
+          registry:
+            url: docker://docker.io/containercraft/ubuntu:24-04
+
+  template:
+    metadata:
+      labels:
+        app: kalilix
+        os: ubuntu
+        version: "24.04"
+        role: development
+      annotations:
+        vm.kubevirt.io/os: "ubuntu"
+    spec:
+      # Enable SSH key injection via qemu-guest-agent
+      accessCredentials:
+        - sshPublicKey:
+            propagationMethod:
+              qemuGuestAgent:
+                users:
+                  - kali
+            source:
+              secret:
+                secretName: kargo-sshpubkey-kali
+
+      hostname: kalilix
+      terminationGracePeriodSeconds: 30
+
+      domain:
+        # Machine type for modern features
+        machine:
+          type: q35
+
+        # Firmware configuration
+        firmware:
+          uuid: b9c8d7e6-2345-6789-abcd-ef0123456789
+          serial: kalilix-001
+          bootloader:
+            bios: {}
+
+        # CPU configuration: 4 cores for Nix builds
+        cpu:
+          cores: 1
+          sockets: 1
+          threads: 6
+          model: host-passthrough
+          dedicatedCpuPlacement: false
+
+        # Clock configuration
+        clock:
+          utc: {}
+          timer:
+            hpet:
+              present: false
+            pit:
+              tickPolicy: delay
+            rtc:
+              tickPolicy: catchup
+            hyperv: {}
+
+        resources:
+          requests:
+            memory: 16Gi
+            devices.kubevirt.io/kvm: "1"
+          limits:
+            memory: 16Gi
+
+        # Features for modern OS support
+        features:
+          acpi: {}
+          apic: {}
+          smm:
+            enabled: true
+
+        # Device configuration
+        devices:
+          autoattachPodInterface: true
+          autoattachSerialConsole: true
+          autoattachGraphicsDevice: true
+          networkInterfaceMultiqueue: true
+          rng: {}
+
+          # Disk configuration
+          disks:
+            - name: root-disk
+              bootOrder: 1
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+
+          # Network interface with stable MAC address
+          interfaces:
+            - name: enp1s0
+              bridge: {}
+              model: virtio
+              macAddress: "52:54:00:0b:00:25"
+
+      # Network configuration
+      networks:
+        - name: enp1s0
+          multus:
+            networkName: br0-network-attachment
+
+      # Volume configuration
+      volumes:
+        - name: root-disk
+          dataVolume:
+            name: kalilix-root
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            networkData: |
+              version: 2
+              renderer: networkd
+              ethernets:
+                enp1s0:
+                  dhcp4: false
+                  dhcp6: false
+              bridges:
+                br0:
+                  interfaces: [enp1s0]
+                  dhcp4: true
+                  dhcp6: true
+                  dhcp-identifier: mac
+            secretRef:
+              name: kalilix-userdata

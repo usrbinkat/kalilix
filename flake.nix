@@ -105,7 +105,7 @@
     ) // {
       # Non-system-specific outputs
       overlays = {
-        default = overlays;
+        default = nixpkgs.lib.composeManyExtensions overlays;
       };
     };
 }
