@@ -31,8 +31,8 @@ project_env = "development"
 platform = "auto"  # auto, docker, native, wsl
 
 # Nix configuration
-nix_version = "2.24.10"
-nix_installer_url = "https://install.determinate.systems/nix"
+nix_version = "2.93.0"
+nix_installer_url = "https://install.lix.systems/lix"
 nix_channels = "nixpkgs-unstable nixos-24.05"
 
 # Container configuration

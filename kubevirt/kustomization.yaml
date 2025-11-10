@@ -1,0 +1,54 @@
+# Kalilix KubeVirt Deployment
+# Deploy minimal Ubuntu 24.04 VM with automated Kalilix Lix/Nix bootstrap
+#
+# Quick Deploy:
+# =============
+# 1. Create SSH key secret (required):
+#    kubectl create secret generic kargo-sshpubkey-kali \
+#      --from-file=key1=$HOME/.ssh/id_ed25519.pub \
+#      --namespace=default
+#
+# 2. Deploy from GitHub (replace 'main' with branch if needed):
+#    kubectl kustomize https://github.com/usrbinkat/kalilix//kubevirt?ref=main | kubectl apply -f -
+#
+# 3. Monitor deployment:
+#    kubectl get vm,vmi,dv,pvc -l app=kalilix
+#
+# 4. Get VM IP and connect:
+#    kubectl get vmi kalilix -o jsonpath='{.status.interfaces[0].ipAddress}'
+#    ssh kali@<VM_IP>
+#
+# Cleanup:
+# ========
+# kubectl delete vm kalilix
+# kubectl delete pvc kalilix-root
+# kubectl delete secret kalilix-userdata kargo-sshpubkey-kali
+#
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: default
+
+# Generate secret from cloud-init userdata file
+secretGenerator:
+  - name: kalilix-userdata
+    files:
+      - userdata=kalilix-userdata.yaml
+    options:
+      disableNameSuffixHash: true
+
+# VirtualMachine resource
+resources:
+  - ubuntu-kalilix-flake-minimal.yaml
+
+# Common labels for all resources
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/part-of: kalilix
+
+# Metadata annotations
+commonAnnotations:
+  kalilix.io/repo: "https://github.com/usrbinkat/kalilix"
+  kalilix.io/description: "Kalilix minimal development environment with automated Lix/Nix bootstrap"
