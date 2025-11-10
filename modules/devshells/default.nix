@@ -10,7 +10,8 @@ let
       name = "kalilix-${name}";
       buildInputs = old.buildInputs ++ config.packages;
       shellHook = old.shellHook + "\n" + config.shellHook;
-      env = old.env // config.env // { KALILIX_SHELL = name; };
+      # mkShell doesn't expose env via overrideAttrs, so we set it directly
+      env = (old.env or {}) // (config.env or {}) // { KALILIX_SHELL = name; };
     });
 
 in {

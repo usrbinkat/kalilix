@@ -21,9 +21,10 @@ pkgs.mkShell {
     # Use the wrapped version of pulumi-mcp-server that handles cache directories
     pulumiMcpServerWrapped
 
-    # Locale support
-    glibcLocales
-
+    # Locale support (Linux only - macOS uses system locales)
+  ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
+    pkgs.glibcLocales
+  ] ++ (with pkgs; [
     # Core tools
     git
     gh
@@ -64,12 +65,14 @@ pkgs.mkShell {
     curl
     unzip
     zip
-  ];
+  ]);
 
   shellHook = ''
-    # Set up locale archive path for Nix environments
-    # This provides the locale data within the Nix shell
-    export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
+    # Set up locale archive path for Nix environments (Linux only)
+    # On macOS, locales are handled by the system
+    ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+      export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
+    ''}
 
     # Fix locale settings - use C.UTF-8 which is always available
     # This prevents setlocale warnings in containers
@@ -116,10 +119,8 @@ pkgs.mkShell {
     KALILIX_SHELL = "base";
     EDITOR = "vim";
     PAGER = "bat";
-
-    # Locale settings - point to Nix's locale archive
-    LOCALE_ARCHIVE = "${pkgs.glibcLocales}/lib/locale/locale-archive";
     LANG = "C.UTF-8";
+    # Note: LOCALE_ARCHIVE is set in shellHook (Linux-only)
     # Don't set LC_* variables in env, let shellHook handle them
   };
 }

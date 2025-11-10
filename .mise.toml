@@ -136,15 +136,25 @@ shell = "bash"
 script = '''
 # Auto-enter Nix development shell when in workspace
 if [ -z "$IN_NIX_SHELL" ] && [ -f "flake.nix" ]; then
-    # Check if we're in an interactive shell
-    if [[ $- == *i* ]]; then
-        # Interactive: use exec to replace shell
-        echo "🚀 Entering Nix development environment..."
-        exec nix develop
-    else
-        # Non-interactive: just export the PATH
-        # This allows docker exec commands to work
-        eval "$(nix develop --command bash -c 'echo export PATH=\"$PATH\"')"
+    # Source nix daemon profile if nix isn't available but profile exists
+    if ! command -v nix &>/dev/null; then
+        if [ -f "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ]; then
+            source "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh"
+        fi
+    fi
+
+    # Only proceed if nix command is available
+    if command -v nix &>/dev/null; then
+        # Check if we're in an interactive shell
+        if [[ $- == *i* ]]; then
+            # Interactive: use exec to replace shell
+            echo "🚀 Entering Nix development environment..."
+            exec nix develop
+        else
+            # Non-interactive: just export the PATH
+            # This allows docker exec commands to work
+            eval "$(nix develop --command bash -c 'echo export PATH=\"$PATH\"')" 2>/dev/null || true
+        fi
     fi
 fi
 '''
