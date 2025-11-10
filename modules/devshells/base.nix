@@ -88,10 +88,8 @@ pkgs.mkShell {
     # Configure starship if available
     command -v starship &>/dev/null && eval "$(starship init bash)"
 
-    # Activate mise for automatic environment management
-    if command -v mise &>/dev/null; then
-      eval "$(mise activate bash)"
-    fi
+    # Note: mise is already activated in shell profiles (.bashrc/.zshrc)
+    # Don't re-activate here to avoid infinite loop with hooks
 
     # Show banner
     echo "╔══════════════════════════════════════════════╗"

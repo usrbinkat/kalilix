@@ -135,7 +135,8 @@ includes = [
 shell = "bash"
 script = '''
 # Auto-enter Nix development shell when in workspace
-if [ -z "$IN_NIX_SHELL" ] && [ -f "flake.nix" ]; then
+# Skip if already in nix shell (check multiple indicators)
+if [ -z "$IN_NIX_SHELL" ] && [ -z "$KALILIX_SHELL" ] && [ -f "flake.nix" ]; then
     # Source nix daemon profile if nix isn't available but profile exists
     if ! command -v nix &>/dev/null; then
         if [ -f "/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh" ]; then
