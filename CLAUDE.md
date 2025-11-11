@@ -223,6 +223,29 @@ Standard branch model:
 - Feature branches: `feature/description`
 - Conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
 
+### Git Staging Requirements
+
+**CRITICAL - ALWAYS FOLLOW THESE RULES**:
+
+1. **Review changes first** - Always run `git status` before staging any files
+2. **Explicit file staging ONLY** - Use `git add file1 file2 file3` with explicit file names
+3. **FORBIDDEN commands**:
+   - `git add -A` (adds everything including untracked)
+   - `git add -u` (updates all tracked files)
+   - `git add .` (adds everything in current directory)
+4. **Procedural care** - Stage only the files relevant to the current commit scope
+
+### Git Commit Requirements
+
+**CRITICAL - NEVER VIOLATE THESE RULES**:
+
+1. **NO attribution lines** - NEVER add "Generated with Claude Code", "Co-Authored-By", emojis, or any attribution
+2. **Purely technical** - Commits must be ONLY technical content based on `git --no-pager diff --staged`
+3. **Conventional commits format** - Use semantic release format: `type(scope): subject` with detailed body
+4. **No filtering** - Read FULL diff output without grep/head/tail truncation
+
+A commit-msg hook enforces these rules and will reject commits with attribution.
+
 ## Binary Caching
 
 The project uses binary caches to avoid rebuilding:

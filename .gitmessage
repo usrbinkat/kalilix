@@ -1,0 +1,14 @@
+# Commit Message Template
+#
+# Format: <type>(<scope>): <subject>
+#
+# <body>
+#
+# Types: feat, fix, docs, style, refactor, perf, test, chore
+#
+# RULES:
+# - NO attribution lines
+# - NO "Generated with Claude Code"
+# - NO "Co-Authored-By" lines
+# - ONLY technical content based on git diff
+# - Use conventional commits format
