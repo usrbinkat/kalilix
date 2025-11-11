@@ -1,5 +1,11 @@
 # Kalilix KubeVirt Deployment
-# Deploy minimal Ubuntu 24.04 VM with automated Kalilix Lix/Nix bootstrap
+# Deploy minimal VM with automated Kalilix Lix/Nix bootstrap
+#
+# Available Variants:
+# ===================
+# - Ubuntu 24.04:  ubuntu-kalilix-flake-minimal.yaml  (available)
+# - Debian 13:     debian-kalilix-flake-minimal.yaml  (available)
+# - Kali Linux:    kali-kalilix-flake-minimal.yaml    (active - uses golden image cloning)
 #
 # Quick Deploy:
 # =============
@@ -8,21 +14,28 @@
 #      --from-file=key1=$HOME/.ssh/id_ed25519.pub \
 #      --namespace=default
 #
-# 2. Deploy from GitHub (replace 'main' with branch if needed):
+# 2. Deploy golden image + VM using kustomize (creates golden image first, then clones for VM):
+#    kubectl apply -k kubevirt/
+#    # OR from GitHub:
 #    kubectl kustomize https://github.com/usrbinkat/kalilix//kubevirt?ref=main | kubectl apply -f -
 #
-# 3. Monitor deployment:
-#    kubectl get vm,vmi,dv,pvc -l app=kalilix
+# 3. Monitor golden image import (one-time WAN pull):
+#    kubectl get dv kali-2025-3-golden-image -w
+#    # Wait for phase: Succeeded
 #
-# 4. Get VM IP and connect:
-#    kubectl get vmi kalilix -o jsonpath='{.status.interfaces[0].ipAddress}'
+# 4. Monitor VM cloning and startup:
+#    kubectl get vm,vmi,dv,pvc -l app=kalilix-kali
+#
+# 5. Get VM IP and connect:
+#    kubectl get vmi kalilix-kali -o jsonpath='{.status.interfaces[0].ipAddress}'
 #    ssh kali@<VM_IP>
 #
 # Cleanup:
 # ========
-# kubectl delete vm kalilix
-# kubectl delete pvc kalilix-root
-# kubectl delete secret kalilix-userdata kargo-sshpubkey-kali
+# kubectl delete vm kalilix-kali
+# kubectl delete dv kalilix-kali-root kali-2025-3-golden-image
+# kubectl delete pvc kalilix-kali-root kali-2025-3-golden-image
+# kubectl delete secret kali-kalilix-userdata kargo-sshpubkey-kali
 #
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -30,17 +43,47 @@ kind: Kustomization
 
 namespace: default
 
-# Generate secret from cloud-init userdata file
+# Generate secrets from cloud-init userdata files
 secretGenerator:
-  - name: kalilix-userdata
+  # Ubuntu variant (commented for Kali testing)
+  # - name: kalilix-userdata
+  #   files:
+  #     - userdata=kalilix-userdata.yaml
+  #   options:
+  #     disableNameSuffixHash: true
+
+  # Debian variant (commented for Kali testing)
+  # - name: debian-kalilix-userdata
+  #   files:
+  #     - userdata=debian-kalilix-userdata.yaml
+  #   options:
+  #     disableNameSuffixHash: true
+
+  # Kali Linux variant - ACTIVE
+  - name: kali-kalilix-userdata
     files:
-      - userdata=kalilix-userdata.yaml
+      - userdata=kali-kalilix-userdata.yaml
     options:
       disableNameSuffixHash: true
 
-# VirtualMachine resource
+# Golden Images - create these FIRST (one-time registry pulls)
+# VMs clone from golden images for fast deployment
 resources:
-  - ubuntu-kalilix-flake-minimal.yaml
+  # Kali Linux 2025.3 golden image
+  - kali-2025-3-golden-image.yaml
+
+# VirtualMachine resources
+# Comment/uncomment to choose which variant to deploy
+# NOTE: VMs require corresponding golden images to exist first
+
+  # Ubuntu 24.04 (commented for Kali testing)
+  # - ubuntu-kalilix-flake-minimal.yaml
+
+  # Debian 13 (Trixie) (commented for Kali testing)
+  # - debian-kalilix-flake-minimal.yaml
+
+  # Kali Linux 2025.3 - ACTIVE (clones from kali-2025-3-golden-image)
+  - kali-kalilix-flake-minimal.yaml
 
 # Common labels for all resources
 labels:

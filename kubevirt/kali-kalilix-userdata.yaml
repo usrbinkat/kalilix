@@ -1,0 +1,59 @@
+#cloud-config
+hostname: kalilix
+fqdn: kalilix.home.arpa
+ssh_pwauth: true
+disable_root: false
+chpasswd:
+  list: |
+    root:kc2admin
+    kali:kali
+  expire: False
+users:
+  - default
+  - name: kali
+    gecos: Kalilix Development User
+    shell: /bin/bash
+    lock_passwd: false
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    groups: adm,cdrom,dip,sudo,docker
+growpart:
+  mode: auto
+  devices: ["/"]
+  ignore_growroot_disabled: true
+timezone: America/Los_Angeles
+package_update: true
+package_upgrade: true
+package_reboot_if_required: true
+packages:
+  - jq
+  - docker.io
+  - docker-compose
+runcmd:
+  - systemctl enable --now docker
+  - usermod -aG docker kali
+  - sudo -iu kali nix --version
+  - sudo -iu kali mise --version
+  - sudo -iu kali bash -c 'nix build github:usrbinkat/kalilix#devShells.x86_64-linux.full --no-write-lock-file || true'
+  - |
+    cat > /etc/motd <<'EOF'
+    ╔═════════════════════════════════════════════════════════╗
+    ║                                                         ║
+    ║              Kalilix Development Environment            ║
+    ║            Kali Linux 2025.3 with Lix/Nix Flakes        ║
+    ║                                                         ║
+    ║  User: kali                                             ║
+    ║  mise: pre-installed                                    ║
+    ║  nix: pre-installed (multi-user daemon)                 ║
+    ║                                                         ║
+    ║  Quick Start:                                           ║
+    ║    nix develop github:usrbinkat/kalilix#full            ║
+    ║    nix develop github:usrbinkat/kalilix#python          ║
+    ║    nix develop github:usrbinkat/kalilix#devops          ║
+    ║                                                         ║
+    ╚═════════════════════════════════════════════════════════╝
+    EOF
+
+  - echo "$(date) - Kalilix bootstrap complete on Kali Linux" > /home/kali/kalilix-bootstrap-complete
+  - chown kali:kali /home/kali/kalilix-bootstrap-complete
+
+final_message: "Kalilix development environment ready on Kali Linux after $UPTIME seconds"

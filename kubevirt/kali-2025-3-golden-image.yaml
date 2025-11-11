@@ -1,0 +1,50 @@
+---
+# Kali Linux 2025.3 Golden Image DataVolume
+# Pull from registry ONCE - clone this for new VMs (fast local operation)
+#
+# Deployment:
+# ===========
+# 1. Create the golden image (one-time WAN pull):
+#    kubectl apply -f kubevirt/kali-2025-3-golden-image.yaml
+#
+# 2. Wait for import to complete:
+#    kubectl wait --for=condition=Ready dv/kali-2025-3-golden-image --timeout=30m
+#
+# 3. Verify status:
+#    kubectl get dv kali-2025-3-golden-image
+#    # Should show phase: Succeeded
+#
+# 4. Create VMs by cloning this golden image:
+#    kubectl apply -f kubevirt/kali-kalilix-flake-minimal.yaml
+#
+# Update Golden Image:
+# ====================
+# kubectl delete dv kali-2025-3-golden-image
+# kubectl apply -f kubevirt/kali-2025-3-golden-image.yaml
+#
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: kali-2025-3-golden-image
+  namespace: default
+  labels:
+    app: kalilix
+    image-type: golden-image
+    os: kali
+    version: "2025.3"
+  annotations:
+    kalilix.io/description: "Golden image for Kali Linux 2025.3 with pre-installed mise/nix - clone this for new VMs"
+    kalilix.io/source: "docker.io/containercraft/kali:latest-dev"
+    kalilix.io/features: "mise,nix-multi-user,nix-daemon"
+    cdi.kubevirt.io/storage.bind.immediate.requested: "true"
+spec:
+  source:
+    registry:
+      url: docker://docker.io/containercraft/kali:latest-dev
+  storage:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 256Gi
+    storageClassName: hostpath-provisioner

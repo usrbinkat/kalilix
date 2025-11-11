@@ -1,0 +1,197 @@
+---
+# Kali Linux 2025.3 VM with Automated Kalilix Bootstrap
+# Uses cloud-init to automatically install mise and bootstrap Kalilix flake
+# CLONES from golden image for efficient deployment (no WAN pull per VM)
+#
+# Quick Deployment:
+# ==================
+# 1. Create golden image (ONE TIME - pulls from registry):
+#    kubectl apply -f kubevirt/kali-2025-3-golden-image.yaml
+#    kubectl wait --for=condition=Ready dv/kali-2025-3-golden-image --timeout=30m
+#
+# 2. Create SSH public key secret:
+#    kubectl create secret generic kargo-sshpubkey-kali \
+#      --from-file=key1=$HOME/.ssh/id_ed25519.pub \
+#      --namespace=default
+#
+# 3. Create cloud-init userdata secret:
+#    kubectl create secret generic kali-kalilix-userdata \
+#      --from-file=userdata=kubevirt/kali-kalilix-userdata.yaml \
+#      --namespace=default
+#
+# 4. Deploy the VirtualMachine (clones from golden image - FAST):
+#    kubectl apply -f kubevirt/kali-kalilix-flake-minimal.yaml
+#
+# 5. Monitor VM startup:
+#    kubectl get vm,vmi,dv,pvc -l app=kalilix-kali
+#
+# 6. Get VM IP address:
+#    kubectl get vmi kalilix-kali -o jsonpath='{.status.interfaces[0].ipAddress}'
+#
+# 7. Connect via SSH:
+#    ssh kali@<VM_IP>
+#
+# 8. Verify Kalilix installation (once cloud-init completes):
+#    tail -f /var/log/cloud-init-output.log  # Watch bootstrap progress
+#    mise run status                          # Check environment status
+#    nix develop                              # Enter development shell
+#
+# Cleanup:
+# ========
+# kubectl delete vm kalilix-kali
+# kubectl delete pvc kalilix-kali-root
+# kubectl delete dv kalilix-kali-root
+#
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: kalilix-kali
+  namespace: default
+  labels:
+    app: kalilix-kali
+    os: kali
+    version: "2025.3"
+    role: development
+  annotations:
+    description: "Kali Linux 2025.3 with automated Kalilix Nix flake bootstrap"
+spec:
+  # Automatically start the VM
+  runStrategy: Always
+
+  # DataVolume clones from golden image (fast, no WAN pull)
+  dataVolumeTemplates:
+    - metadata:
+        name: kalilix-kali-root
+      spec:
+        source:
+          pvc:
+            namespace: default
+            name: kali-2025-3-golden-image
+        storage:
+          accessModes:
+            - ReadWriteOnce
+          storageClassName: hostpath-provisioner
+
+  template:
+    metadata:
+      labels:
+        app: kalilix
+        os: kali
+        version: "2025.3"
+        role: development
+      annotations:
+        vm.kubevirt.io/os: "kali"
+    spec:
+      # Enable SSH key injection via qemu-guest-agent
+      accessCredentials:
+        - sshPublicKey:
+            propagationMethod:
+              qemuGuestAgent:
+                users:
+                  - kali
+            source:
+              secret:
+                secretName: kargo-sshpubkey-kali
+
+      hostname: kalilix
+      terminationGracePeriodSeconds: 30
+
+      domain:
+        # Machine type for modern features
+        machine:
+          type: q35
+
+        # Firmware configuration
+        firmware:
+          uuid: b9c8d7e6-2345-6789-abcd-ef0123456791
+          serial: kalilix-kali-001
+          bootloader:
+            bios: {}
+
+        # CPU configuration: 6 threads for Nix builds
+        cpu:
+          cores: 1
+          sockets: 1
+          threads: 8
+          model: host-passthrough
+          dedicatedCpuPlacement: false
+
+        # Clock configuration
+        clock:
+          utc: {}
+          timer:
+            hpet:
+              present: false
+            pit:
+              tickPolicy: delay
+            rtc:
+              tickPolicy: catchup
+            hyperv: {}
+
+        resources:
+          requests:
+            memory: 32Gi
+            devices.kubevirt.io/kvm: "1"
+          limits:
+            memory: 32Gi
+
+        # Features for modern OS support
+        features:
+          acpi: {}
+          apic: {}
+          smm:
+            enabled: true
+
+        # Device configuration
+        devices:
+          autoattachPodInterface: true
+          autoattachSerialConsole: true
+          autoattachGraphicsDevice: true
+          networkInterfaceMultiqueue: true
+          rng: {}
+
+          # Disk configuration
+          disks:
+            - name: root-disk
+              bootOrder: 1
+              disk:
+                bus: virtio
+            - name: cloudinitdisk
+              disk:
+                bus: virtio
+
+          # Network interface with stable MAC address
+          interfaces:
+            - name: enp1s0
+              bridge: {}
+              model: virtio
+              macAddress: "52:54:00:0b:00:27"
+
+      # Network configuration
+      networks:
+        - name: enp1s0
+          multus:
+            networkName: br0-network-attachment
+
+      # Volume configuration
+      volumes:
+        - name: root-disk
+          dataVolume:
+            name: kalilix-kali-root
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            networkData: |
+              version: 2
+              renderer: networkd
+              ethernets:
+                enp1s0:
+                  dhcp4: false
+                  dhcp6: false
+              bridges:
+                br0:
+                  interfaces: [enp1s0]
+                  dhcp4: true
+                  dhcp6: true
+                  dhcp-identifier: mac
+            secretRef:
+              name: kali-kalilix-userdata
