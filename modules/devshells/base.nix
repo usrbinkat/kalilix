@@ -10,6 +10,9 @@ let
 
   # Import the wrapped pulumi-mcp-server that handles cache directories properly
   pulumiMcpServerWrapped = import ../packages/npm/pulumi-mcp-wrapper.nix { inherit pkgs; };
+
+  # Shared bash configuration
+  bashConfig = import ./bash-config.nix { inherit pkgs; };
 in
 pkgs.mkShell {
   name = "kalilix-base";
@@ -65,28 +68,13 @@ pkgs.mkShell {
     curl
     unzip
     zip
-  ]);
+  ] ++ bashConfig.bashPackages);
 
   shellHook = ''
-    # Set up locale archive path for Nix environments (Linux only)
-    # On macOS, locales are handled by the system
-    ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-      export LOCALE_ARCHIVE="${pkgs.glibcLocales}/lib/locale/locale-archive"
-    ''}
-
-    # Fix locale settings - use C.UTF-8 which is always available
-    # This prevents setlocale warnings in containers
-    export LANG=C.UTF-8
-    export LC_CTYPE=C.UTF-8
-    export LC_COLLATE=C.UTF-8
-    # Unset LC_ALL to avoid conflicts
-    unset LC_ALL 2>/dev/null || true
+    ${bashConfig.shellInitScript}
 
     # Load .env if exists
     [ -f .env ] && source .env
-
-    # Configure starship if available
-    command -v starship &>/dev/null && eval "$(starship init bash)"
 
     # Note: mise is already activated in shell profiles (.bashrc/.zshrc)
     # Don't re-activate here to avoid infinite loop with hooks

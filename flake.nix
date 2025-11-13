@@ -24,6 +24,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Neovim configuration
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      # Let nixvim use its own nixpkgs for compatibility
+    };
+
     # Tools
     nixpkgs-fmt = {
       url = "github:nix-community/nixpkgs-fmt";

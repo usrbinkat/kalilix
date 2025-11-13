@@ -49,13 +49,13 @@ Kalilix uses a **layered architecture** for maximum flexibility:
 │      (Mise Tasks & Shell Hooks)             │
 ├─────────────────────────────────────────────┤
 │       Development Shell Layer               │
-│  (base → python/go/rust/node/devops/full)  │
+│  (base → python/go/rust/node/devops/full)   │
 ├─────────────────────────────────────────────┤
 │         Nix Flake Layer                     │
 │  (Deterministic Package Management)         │
 ├─────────────────────────────────────────────┤
 │      Platform Abstraction Layer             │
-│  (macOS, Linux, NixOS, WSL, Containers)    │
+│  (macOS, Linux, NixOS, WSL, Containers)     │
 └─────────────────────────────────────────────┘
 ```
 
@@ -165,7 +165,7 @@ nix develop kalilix#python  # Now use short name
 
 ## Development Shells
 
-Kalilix provides **7 specialized environments**, each extending a common base:
+Kalilix provides **8 specialized environments**, each extending a common base:
 
 ### Base Shell (Default)
 **26 packages**: Modern CLI tools, MCP servers, Nix tooling
@@ -245,6 +245,22 @@ nix develop .#devops  # or: mise run dev:devops
 ```bash
 nix develop .#full  # or: mise run dev:full
 ```
+
+### Neovim Shell
+**Highly-optimized Neovim** with 10 LSP servers, lazy loading, 73ms startup
+
+```bash
+nix develop .#neovim  # or: mise run dev:neovim
+```
+
+**Features:**
+- **LSP**: Nix, Lua, Bash, YAML, Markdown, JSON, Python, Go, Rust, TypeScript
+- **Auto-format**: 11 formatters with format-on-save
+- **Git**: gitsigns, fugitive, diffview, lazygit integration
+- **Tools**: HTTP client (rest.nvim), markdown preview, integrated terminal
+- **Performance**: 55% faster startup via lazy loading + byte compilation
+
+**See [NEOVIM.md](NEOVIM.md) for complete configuration details.**
 
 ---
 
@@ -433,6 +449,7 @@ kalilix/
 ├── .mise.toml                   # Task automation root (174 lines)
 ├── compose.yml                  # Docker composition
 ├── CLAUDE.md                    # AI assistant guidance
+├── NEOVIM.md                    # Neovim configuration guide
 │
 ├── .devcontainer/               # Container development environment
 │   ├── Dockerfile.systemd       # Systemd-enabled container image
@@ -446,8 +463,9 @@ kalilix/
 │
 ├── modules/                     # Nix modules
 │   ├── devshells/
-│   │   ├── default.nix          # Shell orchestrator (241 lines)
-│   │   └── base.nix             # Base environment (125 lines)
+│   │   ├── default.nix          # Shell orchestrator (280 lines)
+│   │   ├── base.nix             # Base environment (125 lines)
+│   │   └── neovim.nix           # Neovim configuration (431 lines)
 │   └── packages/
 │       ├── nixpkgs-mcp.list     # MCP ecosystem research
 │       └── npm/                 # Node packages via node2nix
@@ -994,14 +1012,15 @@ Individual tools and packages maintain their original licenses.
 
 ## Project Statistics
 
-- **Lines of Nix Code**: ~1,500 authored + 4,180 generated
+- **Lines of Nix Code**: ~2,000 authored + 4,180 generated
 - **Mise Task Configuration**: 1,697 lines across 5 modules
 - **Discrete Tasks**: 74 automated workflows
-- **Development Shells**: 7 specialized environments
+- **Development Shells**: 8 specialized environments
 - **MCP Servers**: 15+ pre-configured
 - **Supported Platforms**: 8+ (macOS x86/ARM, Linux, WSL, containers, NixOS, Codespaces)
 - **Binary Caches**: 3-tier strategy
 - **Container Volumes**: 14 for optimal persistence
+- **Neovim**: 10 LSP servers, 73ms startup (55% faster via lazy loading)
 
 ---
 

@@ -4,6 +4,9 @@ let
   # Import base configuration
   base = import ./base.nix { inherit pkgs lib inputs; };
 
+  # Import neovim configuration
+  neovimModule = import ./neovim.nix { inherit pkgs lib inputs; };
+
   # Helper to extend base shell
   extendShell = name: config:
     base.overrideAttrs (old: {
@@ -236,6 +239,43 @@ in {
 
     env = {
       KALILIX_FULL = "true";
+    };
+  };
+
+  # Neovim development environment
+  neovim = extendShell "neovim" {
+    packages = neovimModule.neovim-packages ++ (with pkgs; [
+      # Required dependencies for telescope
+      ripgrep  # For live_grep
+      fd       # For find_files
+
+      # Formatters (Phase 2)
+      nixpkgs-fmt           # Nix
+      black                 # Python
+      isort                 # Python imports
+      rustfmt               # Rust (usually from rust toolchain)
+      go                    # Go (includes gofmt and goimports)
+      nodePackages.prettier # JS/TS/Markdown/YAML/JSON
+      shfmt                 # Bash/Shell
+
+      # Phase 3 dependencies
+      lazygit               # Git TUI for toggleterm integration
+    ]);
+
+    shellHook = ''
+      echo "📝 Neovim Development Environment"
+      echo "   Launch: nvim"
+      echo "   Config: nixvim-managed (immutable)"
+      echo "   LSP: Python, Go, Rust, Node, Nix, Bash, YAML, JSON, Markdown, Lua"
+      echo "   Features: Completion, Snippets, Auto-format on save"
+      echo "   Git: gitsigns, fugitive, diffview, lazygit"
+      echo "   Tools: toggleterm, rest.nvim, markdown-preview, which-key"
+      echo ""
+    '';
+
+    env = {
+      EDITOR = "nvim";
+      VISUAL = "nvim";
     };
   };
 }
