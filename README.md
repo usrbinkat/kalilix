@@ -260,6 +260,14 @@ nix develop .#neovim  # or: mise run dev:neovim
 - **Tools**: HTTP client (rest.nvim), markdown preview, integrated terminal
 - **Performance**: 55% faster startup via lazy loading + byte compilation
 
+**ClaudeCode MCP Integration ([claudecode.nvim](https://github.com/coder/claudecode.nvim)):**
+- Lazy-loaded on first use (zero startup overhead)
+- `<leader>cc` - Open Claude Code (auto-starts server if needed)
+- `<leader>co` - Open Claude Code terminal directly
+- `<leader>cs` - Show server status
+- `<leader>cq` - Stop server
+- Native Neovim terminal provider with toggleterm compatibility
+
 **See [NEOVIM.md](NEOVIM.md) for complete configuration details.**
 
 ---
@@ -364,6 +372,10 @@ Kalilix is **AI-first** with 15+ pre-configured MCP servers for development assi
 ### HTTP-Based MCP Services
 
 - **DeepWiki** (https://mcp.deepwiki.com/mcp): Documentation comprehension
+
+### Neovim Integration
+
+[**claudecode.nvim**](https://github.com/coder/claudecode.nvim) is integrated directly into the Neovim development shell with lazy loading and native terminal support. Access Claude Code via `<leader>cc` when in the Neovim shell for AI-assisted development with full editor context. See [Neovim Shell](#neovim-shell) for keybindings and configuration details.
 
 ### Configuration
 
