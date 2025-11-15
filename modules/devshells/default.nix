@@ -7,6 +7,9 @@ let
   # Import neovim configuration
   neovimModule = import ./neovim.nix { inherit pkgs lib inputs; };
 
+  # Import security tools
+  securityTools = import ../packages/security-tools/default.nix { inherit pkgs lib; };
+
   # Helper to extend base shell
   extendShell = name: config:
     base.overrideAttrs (old: {
@@ -178,6 +181,67 @@ in
 
     env = {
       PULUMI_SKIP_UPDATE_CHECK = "true";
+    };
+  };
+
+  # Kali Security Testing Environment
+  kali = extendShell "kali" {
+    packages = securityTools.nixpkgsSecurityTools ++ (with pkgs; [
+      # Additional CLI security tools
+      masscan # Mass IP port scanner
+      gobuster # Directory/file and DNS brute forcer
+      sqlmap # SQL injection testing tool
+      dirb # Web content scanner
+      nikto # Web server scanner
+      theharvester # Information gathering tool
+      whatweb # Web technology identifier
+      wpscan # WordPress security scanner
+      enum4linux # SMB/CIFS enumeration tool (classic)
+      enum4linux-ng # SMB/CIFS enumeration tool (modern Python rewrite)
+      dnsenum # DNS enumeration tool
+      john # John the Ripper password cracker
+      thc-hydra # Network authentication cracker
+      metasploit # Exploitation framework
+      volatility2-bin # Memory forensics framework (classic)
+      volatility3 # Memory forensics framework (modern)
+      radare2 # Reverse engineering framework
+    ]);
+
+    shellHook = ''
+      echo "🔒 Kali Security Testing Environment"
+      echo "   Web Fuzzing: ffuf"
+      echo "   Network Scanning: nmap, masscan"
+      echo "   Web Security: burpsuite, sqlmap, gobuster, dirb, nikto"
+      echo "   SMB/CIFS Enumeration: enum4linux, enum4linux-ng"
+      echo "   DNS Enumeration: dnsenum"
+      echo "   Wireless: aircrack-ng"
+      echo "   Password: hashcat, john, hydra"
+      echo "   Exploitation: metasploit"
+      echo "   Forensics: volatility2, volatility3"
+      echo "   Reverse Engineering: radare2"
+      echo "   Network Analysis: wireshark, tcpdump"
+      echo ""
+
+      # Create Kali-style directory structure
+      export KALI_CONFIG_DIR="$HOME/.config/kali"
+      export WORDLISTS="$HOME/.local/share/wordlists"
+      export KALI_TOOLS_DIR="$HOME/.local/share/kali-tools"
+
+      mkdir -p "$KALI_CONFIG_DIR" "$WORDLISTS" "$KALI_TOOLS_DIR"
+
+      echo "   Config: $KALI_CONFIG_DIR"
+      echo "   Wordlists: $WORDLISTS"
+      echo "   Tools: $KALI_TOOLS_DIR"
+      echo ""
+      echo "🎯 Ready for security testing (CLI tools only)"
+    '';
+
+    env = {
+      # Kali-specific environment variables
+      KALI_ROOT = "$HOME/.local/share/kali";
+      BURP_USER_CONFIG_FILE = "$HOME/.config/kali/burp.config";
+      # Disable some GUI warnings for CLI usage
+      NO_AT_BRIDGE = "1";
     };
   };
 

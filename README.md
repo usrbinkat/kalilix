@@ -83,10 +83,73 @@ Kalilix uses a **layered architecture** for maximum flexibility:
 
 ### Prerequisites
 
-- **Nix** (installed automatically if missing)
+- **Lix** (Nix variant - installation instructions below)
 - **Docker** (optional, for containerized development)
 - **Mise** (installed automatically)
 - **Git**
+
+### Lix Installation (Required)
+
+Kalilix is designed for **Lix**, an independent variant of Nix with enhanced features. Install with optimal configuration for security tools:
+
+#### Fresh Lix Installation (Recommended)
+```bash
+# Install Lix with Kalilix-optimized configuration
+curl -sSf -L https://install.lix.systems/lix | sh -s -- install \
+  --no-confirm \
+  --extra-conf "experimental-features = nix-command flakes" \
+  --extra-conf "allow-unfree = true" \
+  --extra-conf "warn-dirty = false"
+```
+
+#### Upgrading from CppNix to Lix
+```bash
+# Upgrade existing Nix to Lix with security tools support
+sudo --preserve-env=PATH nix run \
+     --experimental-features "nix-command flakes" \
+     --extra-substituters https://cache.lix.systems \
+     --extra-trusted-public-keys "cache.lix.systems:aBnZUw8zA7H35Cz2RyKFVs3H4PlGTLawyY5KRbvJR8o=" \
+     'git+https://git.lix.systems/lix-project/lix?ref=refs/tags/2.93.3' -- \
+     upgrade-nix \
+     --extra-substituters https://cache.lix.systems \
+     --extra-trusted-public-keys "cache.lix.systems:aBnZUw8zA7H35Cz2RyKFVs3H4PlGTLawyY5KRbvJR8o="
+
+# Add Kalilix security tools configuration
+sudo tee -a /etc/nix/nix.conf << 'EOF'
+experimental-features = nix-command flakes
+allow-unfree = true
+warn-dirty = false
+EOF
+```
+
+#### For NixOS Users
+```nix
+# configuration.nix or flake.nix
+{
+  # Use Lix instead of CppNix
+  nix.package = pkgs.lix;
+
+  # Kalilix security toolkit configuration
+  nixpkgs.config.allowUnfree = true;
+  nix.settings = {
+    experimental-features = [ "nix-command" "flakes" ];
+    allow-unfree = true;
+    warn-dirty = false;
+  };
+}
+```
+
+#### Verify Installation
+```bash
+# Should show "Lix" in output
+nix --version
+# Expected: nix (Lix, like Nix) 2.93.3
+
+# Test configuration
+nix show-config | grep -E "(experimental-features|allow-unfree)"
+```
+
+**Why Lix + Unfree**: Kalilix includes professional security tools (Volatility3, Metasploit, reverse engineering frameworks) requiring unfree package support. The one-command installation ensures you get the complete security toolkit immediately.
 
 ### Installation
 
