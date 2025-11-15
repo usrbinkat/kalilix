@@ -13,10 +13,10 @@ let
 
   # Define nixvim configuration
   nixvimConfig = nixvimPkgs.makeNixvim {
-    # Use catppuccin colorscheme for security work
+    # Use catppuccin colorscheme matching tmux
     colorschemes.catppuccin = {
       enable = true;
-      settings.flavour = "mocha";  # Dark theme
+      settings.flavour = "macchiato";  # Matches tmux theme
     };
 
     # Essential options
@@ -175,7 +175,18 @@ let
       # Status line
       lualine = {
         enable = true;
-        settings.options.theme = "catppuccin";
+        settings.options = {
+          theme = "catppuccin";
+          # Rounded separators to match tmux
+          component_separators = {
+            left = "";
+            right = "";
+          };
+          section_separators = {
+            left = "";
+            right = "";
+          };
+        };
       };
 
       # Fuzzy finder

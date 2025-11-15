@@ -1,0 +1,40 @@
+# Kalilix Development Session
+# tmuxp session configuration for polyglot development
+# Usage: tmuxp load .tmuxp.yaml
+
+session_name: kalilix
+start_directory: ./
+
+windows:
+  # Main editing window with neovim
+  - window_name: Neovim
+    layout: main-horizontal
+    options:
+      main-pane-height: 70
+    focus: true
+    panes:
+      - focus: true
+        shell_command:
+          - nvim
+      - shell_command:
+          - hyfetch
+
+  # Nix operations window
+  - window_name: Nix
+    layout: even-vertical
+    panes:
+      - shell_command:
+          - mise task ls
+
+  # Docker/Container window
+  - window_name: docker
+    panes:
+      - shell_command:
+          - docker ps --all
+
+  # Shell for ad-hoc commands
+  - window_name: bash
+    panes:
+      - shell_command:
+          - hyfetch
+          - mise run status

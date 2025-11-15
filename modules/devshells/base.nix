@@ -13,6 +13,15 @@ let
 
   # Shared bash configuration
   bashConfig = import ./bash-config.nix { inherit pkgs; };
+
+  # Tmux configuration module
+  tmuxModule = import ../programs/tmux/config.nix { inherit pkgs lib; };
+
+  # Neovim configuration module
+  neovimModule = import ./neovim.nix { inherit pkgs lib inputs; };
+
+  # Hyfetch configuration module
+  hyfetchModule = import ../programs/hyfetch/config.nix { inherit pkgs lib; };
 in
 pkgs.mkShell {
   name = "kalilix-base";
@@ -27,7 +36,7 @@ pkgs.mkShell {
     # Locale support (Linux only - macOS uses system locales)
   ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
     pkgs.glibcLocales
-  ] ++ (with pkgs; [
+  ] ++ neovimModule.neovim-packages ++ (with pkgs; [
     # Core tools
     git
     gh
@@ -45,7 +54,6 @@ pkgs.mkShell {
     procs    # ps
 
     # Terminal tools
-    tmux
     direnv
     starship
     atuin
@@ -68,7 +76,7 @@ pkgs.mkShell {
     curl
     unzip
     zip
-  ] ++ bashConfig.bashPackages);
+  ]) ++ tmuxModule.packages ++ hyfetchModule.packages ++ bashConfig.bashPackages;
 
   shellHook = ''
     ${bashConfig.shellInitScript}
@@ -79,6 +87,12 @@ pkgs.mkShell {
     # Note: mise is already activated in shell profiles (.bashrc/.zshrc)
     # Don't re-activate here to avoid infinite loop with hooks
 
+    # Tmux module shell hook
+    ${tmuxModule.shellHook}
+
+    # Hyfetch module shell hook
+    ${hyfetchModule.shellHook}
+
     # Show banner
     echo "╔══════════════════════════════════════════════╗"
     echo "║     🚀 Kalilix Development Environment        ║"
@@ -88,9 +102,14 @@ pkgs.mkShell {
     echo "Platform: ''${KALILIX_PLATFORM:-container}"
     echo "Shell: ''${KALILIX_SHELL:-base}"
     echo ""
+    echo "Available tools:"
+    echo "  nvim                    - Neovim with full LSP support"
+    echo "  tmux                    - Tmux with Catppuccin theme"
+    echo "  tmuxp load .tmuxp.yaml  - Start project tmux session"
+    echo ""
     echo "Available commands:"
-    echo "  mise tasks    - Show all available tasks"
-    echo "  mise run help - Show Kalilix help"
+    echo "  mise tasks              - Show all available tasks"
+    echo "  mise run help           - Show Kalilix help"
     echo ""
     echo "To enter a specific development shell:"
     echo "  nix develop .#python  - Python environment"
