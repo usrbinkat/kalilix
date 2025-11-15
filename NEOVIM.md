@@ -18,6 +18,7 @@ The Kalilix Neovim shell provides a **fully-configured, immutable Neovim environ
 - **Performance Optimized**: Byte-compiled Lua + plugin combining
 - **Developer Tools**: HTTP client (rest.nvim), markdown preview, integrated terminal
 - **Command Discovery**: which-key for keybinding help
+- **ClaudeCode MCP Integration**: AI-assisted development with lazy-loaded claudecode.nvim
 
 ---
 
@@ -474,6 +475,74 @@ git status          # Check git status
 
 ---
 
+## ClaudeCode MCP Integration
+
+### Overview
+
+[**claudecode.nvim**](https://github.com/coder/claudecode.nvim) provides AI-assisted development through the Model Context Protocol, enabling Claude to interact with your editor, view files, and make changes with full context awareness.
+
+### Features
+
+- **Lazy-loaded**: Zero startup overhead, loads only when invoked
+- **Native terminal provider**: Seamless integration with toggleterm
+- **Full editor context**: Claude can read files, view selections, and understand your codebase
+- **Vertical split layout**: Terminal opens beside your code for easy review
+- **Smart keybindings**: Auto-starts server if needed
+
+### Keybindings
+
+| Key | Action | Description |
+|-----|--------|-------------|
+| `<leader>cc` | Open Claude Code | Auto-starts server if needed, opens terminal |
+| `<leader>co` | Open terminal | Opens Claude Code terminal directly |
+| `<leader>cs` | Show status | Display server status and connection info |
+| `<leader>cq` | Stop server | Gracefully stop Claude Code server |
+
+### Configuration
+
+ClaudeCode is configured with:
+- **Terminal provider**: `native` (compatible with toggleterm)
+- **Logging**: `info` level (set to `debug` for troubleshooting)
+- **Diff options**:
+  - Vertical splits enabled
+  - Terminal focus retained after diff opens
+  - Auto-close on accept
+  - Show diff statistics
+
+### Common Workflows
+
+**Basic usage:**
+```
+<leader>cc          # Open Claude Code
+"Fix the bug in this function"
+<Esc>               # Exit terminal mode to review changes
+```
+
+**Code review with diff:**
+```
+<leader>cc          # Open Claude Code
+"Refactor this to use async/await"
+# Claude shows diff in split window
+# Review changes while keeping terminal visible
+```
+
+**Multi-file operations:**
+```
+<leader>cc          # Open Claude Code
+"Update all config files to use new format"
+# Claude can read and edit multiple files
+<leader>co          # Reopen terminal if closed
+```
+
+### Technical Details
+
+- **Lazy loading trigger**: Commands `ClaudeCodeStart`, `ClaudeCodeStop`, `ClaudeCodeStatus`, `ClaudeCodeOpen`
+- **Setup function**: Only runs when needed, not at startup
+- **WebSocket server**: Automatically managed by the plugin
+- **Lock file**: Created at `~/.claude/ide/` for server discovery
+
+---
+
 ## HTTP Client (rest.nvim)
 
 ### Usage
@@ -619,6 +688,7 @@ No specific font required, but **Nerd Fonts** recommended for icons:
 - `<leader>t*` - **Terminal** operations
 - `<leader>r*` - **REST** client
 - `<leader>m*` - **Markdown** tools
+- `<leader>c*` - **ClaudeCode** MCP integration
 
 ---
 
@@ -718,6 +788,7 @@ Included automatically by nixvim LSP module:
 ### Additional Tools
 
 - **lazygit** - Git TUI
+- **claudecode.nvim** - MCP integration for AI-assisted development
 
 ---
 
@@ -1111,6 +1182,7 @@ The Kalilix Neovim shell provides a **complete, optimized development editor** w
 - ✅ **Performance optimized** (73ms startup, lazy loading)
 - ✅ **Fully reproducible** via Nix
 - ✅ **Immutable configuration** for consistency
+- ✅ **ClaudeCode MCP integration** (lazy-loaded AI assistance)
 
 **Access with:**
 ```bash
