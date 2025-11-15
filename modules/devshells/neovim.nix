@@ -1,8 +1,7 @@
-{
-  pkgs,
-  lib,
-  inputs,
-  ...
+{ pkgs
+, lib
+, inputs
+, ...
 }:
 let
   # Import nixvim's package builder
@@ -16,7 +15,7 @@ let
     # Use catppuccin colorscheme matching tmux
     colorschemes.catppuccin = {
       enable = true;
-      settings.flavour = "macchiato";  # Matches tmux theme
+      settings.flavour = "macchiato"; # Matches tmux theme
     };
 
     # Essential options
@@ -49,26 +48,26 @@ let
 
       # Shell settings
       # CRITICAL: Use Nix bash (5.2+), not ancient macOS system bash (3.2)
-      shell = "${pkgs.bash}/bin/bash";  # Shell to use for :! commands and terminal
-      shellcmdflag = "-c";              # Flag to execute command
-      shellquote = "";                   # Quoting for shell commands
-      shellxquote = "";                  # Extended quoting for shell commands
-      shellpipe = "2>&1| tee";          # Pipe command for :make
-      shellredir = ">%s 2>&1";          # Redirection for :make
+      shell = "${pkgs.bash}/bin/bash"; # Shell to use for :! commands and terminal
+      shellcmdflag = "-c"; # Flag to execute command
+      shellquote = ""; # Quoting for shell commands
+      shellxquote = ""; # Extended quoting for shell commands
+      shellpipe = "2>&1| tee"; # Pipe command for :make
+      shellredir = ">%s 2>&1"; # Redirection for :make
 
       # Terminal behavior
-      splitbelow = true;                 # Open horizontal splits below
-      splitright = true;                 # Open vertical splits right
+      splitbelow = true; # Open horizontal splits below
+      splitright = true; # Open vertical splits right
 
       # Terminal scrollback
-      scrollback = 10000;                # Lines of scrollback in terminal
+      scrollback = 10000; # Lines of scrollback in terminal
 
       # Terminal title
-      title = true;                      # Set terminal title
-      titlestring = "nvim - %f";        # Terminal title format
+      title = true; # Set terminal title
+      titlestring = "nvim - %f"; # Terminal title format
 
       # Mouse support in terminal
-      mouse = "a";                       # Enable mouse in all modes
+      mouse = "a"; # Enable mouse in all modes
     };
 
     # Leader key
@@ -78,7 +77,7 @@ let
     # ============================================
     # Terminal Environment
     # ============================================
-    globals.nvim_terminal = 1;  # Indicate we're in neovim (for shell config detection)
+    globals.nvim_terminal = 1; # Indicate we're in neovim (for shell config detection)
 
     # Essential keymaps
     keymaps = [
@@ -131,6 +130,11 @@ let
       # Markdown preview keymaps
       { mode = "n"; key = "<leader>mp"; action = "<cmd>MarkdownPreview<cr>"; options.desc = "Markdown preview"; }
       { mode = "n"; key = "<leader>ms"; action = "<cmd>MarkdownPreviewStop<cr>"; options.desc = "Stop preview"; }
+
+      # ClaudeCode keymaps
+      { mode = "n"; key = "<leader>cc"; action = "<cmd>ClaudeCodeStart<cr>"; options.desc = "Start Claude Code"; }
+      { mode = "n"; key = "<leader>cs"; action = "<cmd>ClaudeCodeStatus<cr>"; options.desc = "Claude Code Status"; }
+      { mode = "n"; key = "<leader>cq"; action = "<cmd>ClaudeCodeStop<cr>"; options.desc = "Stop Claude Code"; }
     ];
 
     # ============================================
@@ -278,8 +282,8 @@ let
           # Rust
           rust_analyzer = {
             enable = true;
-            installCargo = false;  # Use system cargo from rust shell
-            installRustc = false;  # Use system rustc from rust shell
+            installCargo = false; # Use system cargo from rust shell
+            installRustc = false; # Use system rustc from rust shell
           };
 
           # TypeScript/JavaScript
@@ -316,7 +320,7 @@ let
       luasnip = {
         enable = true;
         fromVscode = [
-          { }  # Load friendly-snippets
+          { } # Load friendly-snippets
         ];
       };
 
@@ -367,22 +371,22 @@ let
           '';
 
           # Terminal behavior
-          open_mapping = "[[<C-\\>]]";      # Ctrl-\ to toggle
-          hide_numbers = true;               # Hide line numbers in terminal
-          shade_terminals = true;            # Shade terminal windows
-          shading_factor = 2;                # Shading amount (1-3)
-          start_in_insert = true;            # Start in insert mode
-          insert_mappings = true;            # Apply mappings in insert mode
-          terminal_mappings = true;          # Apply mappings in terminal mode
-          persist_size = true;               # Remember terminal size
-          persist_mode = true;               # Remember last used mode
+          open_mapping = "[[<C-\\>]]"; # Ctrl-\ to toggle
+          hide_numbers = true; # Hide line numbers in terminal
+          shade_terminals = true; # Shade terminal windows
+          shading_factor = 2; # Shading amount (1-3)
+          start_in_insert = true; # Start in insert mode
+          insert_mappings = true; # Apply mappings in insert mode
+          terminal_mappings = true; # Apply mappings in terminal mode
+          persist_size = true; # Remember terminal size
+          persist_mode = true; # Remember last used mode
 
           # Direction (default behavior)
-          direction = "float";               # 'float' | 'horizontal' | 'vertical' | 'tab'
+          direction = "float"; # 'float' | 'horizontal' | 'vertical' | 'tab'
 
           # Floating window settings
           float_opts = {
-            border = "curved";               # 'single' | 'double' | 'shadow' | 'curved'
+            border = "curved"; # 'single' | 'double' | 'shadow' | 'curved'
             width.__raw = ''
               function()
                 return math.floor(vim.o.columns * 0.85)
@@ -393,7 +397,7 @@ let
                 return math.floor(vim.o.lines * 0.85)
               end
             '';
-            winblend = 0;                    # Transparency (0-100)
+            winblend = 0; # Transparency (0-100)
             highlights = {
               border = "Normal";
               background = "Normal";
@@ -466,13 +470,13 @@ let
           # Auto Scroll
           # ============================================
 
-          auto_scroll = true;                # Auto scroll to bottom on output
+          auto_scroll = true; # Auto scroll to bottom on output
 
           # ============================================
           # Close on Exit
           # ============================================
 
-          close_on_exit = true;              # Close terminal when process exits
+          close_on_exit = true; # Close terminal when process exits
         };
       };
 
@@ -534,7 +538,7 @@ let
           auto_close = 1;
           refresh_slow = 0;
           command_for_global = 0;
-          browser = "";  # Uses system default
+          browser = ""; # Uses system default
         };
       };
 
@@ -584,6 +588,19 @@ let
       };
     };
 
+    # Extra plugins not yet in nixpkgs
+    extraPlugins = with pkgs.vimUtils; [
+      (buildVimPlugin {
+        name = "claudecode.nvim";
+        src = pkgs.fetchFromGitHub {
+          owner = "coder";
+          repo = "claudecode.nvim";
+          rev = "1552086ebcce9f4a2ea3b9793018a884d6b60169"; # Latest commit as of 2025-01-14
+          sha256 = "sha256-XYmf1RQ2bVK6spINZW4rg6OQQ5CWWcR0Tw4QX8ZDjgs=";
+        };
+      })
+    ];
+
     # Performance optimizations
     performance = {
       byteCompileLua = {
@@ -591,13 +608,13 @@ let
         initLua = true;
         configs = true;
         plugins = true;
-        nvimRuntime = false;  # Don't recompile neovim runtime
+        nvimRuntime = false; # Don't recompile neovim runtime
       };
 
       combinePlugins = {
         enable = true;
         standalonePlugins = [
-          "nvim-treesitter"  # Too many parsers, exclude from combining
+          "nvim-treesitter" # Too many parsers, exclude from combining
         ];
         pathsToLink = [
           "/share/vim-plugins"
@@ -607,6 +624,49 @@ let
 
     # Additional Lua configuration
     extraConfigLua = ''
+      -- ==============================================================================
+      -- ClaudeCode.nvim Configuration
+      -- ==============================================================================
+      local claudecode_ok, claudecode = pcall(require, "claudecode")
+      if claudecode_ok then
+        claudecode.setup({
+          -- Terminal provider - use native since we have toggleterm
+          terminal = {
+            provider = "native",  -- Works well with existing toggleterm setup
+          },
+
+          -- Logging configuration
+          log_level = "info",  -- Set to "debug" for troubleshooting
+
+          -- Diff options
+          diff_opts = {
+            keep_terminal_focus = true,  -- Keep focus in terminal after diff opens
+            open_in_new_tab = false,
+            hide_terminal_in_new_tab = false,
+            auto_close_on_accept = true,
+            show_diff_stats = true,
+            vertical_split = true,
+          },
+        })
+
+        -- ClaudeCode keybindings
+        vim.keymap.set("n", "<leader>cc", "<cmd>ClaudeCodeStart<cr>", { desc = "Start Claude Code" })
+        vim.keymap.set("n", "<leader>cs", "<cmd>ClaudeCodeStatus<cr>", { desc = "Claude Code Status" })
+        vim.keymap.set("n", "<leader>cq", "<cmd>ClaudeCodeStop<cr>", { desc = "Stop Claude Code" })
+
+        -- Optional: Auto-start ClaudeCode on VimEnter (uncomment if desired)
+        -- vim.api.nvim_create_autocmd("VimEnter", {
+        --   pattern = "*",
+        --   callback = function()
+        --     vim.defer_fn(function()
+        --       vim.cmd("ClaudeCodeStart")
+        --     end, 100)  -- Delay to ensure all plugins loaded
+        --   end,
+        -- })
+      else
+        vim.notify("ClaudeCode.nvim not found - MCP integration unavailable", vim.log.levels.WARN)
+      end
+
       -- ==============================================================================
       -- LazyGit Integration
       -- ==============================================================================

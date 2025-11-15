@@ -6,35 +6,38 @@ session_name: kalilix
 start_directory: ./
 
 windows:
-  # Main editing window with neovim
-  - window_name: Neovim
+  # 🚀 Home Window 📸
+  - window_name: "🚀 Kalilix"
     layout: main-horizontal
     options:
-      main-pane-height: 70
+      main-pane-height: 66% # Top panes take up 2/3 of window
     focus: true
     panes:
+      # Top: Neovim with README on left and ClaudeCode integration on right
       - focus: true
         shell_command:
-          - nvim
-      - shell_command:
-          - hyfetch
+          - nvim README.md # -c "ClaudeCodeOpen" -c "wincmd h"
+          # Opens README, ClaudeCode opens in a split automatically, focus back to README
 
-  # Nix operations window
-  - window_name: Nix
-    layout: even-vertical
-    panes:
+      # Bottom: Full-width task list
       - shell_command:
           - mise task ls
+# # Nix operations window
+# - window_name: Ops
+#   layout: even-vertical
+#   panes:
+#     - shell_command:
+#         - mise task ls
 
-  # Docker/Container window
-  - window_name: docker
-    panes:
-      - shell_command:
-          - docker ps --all
+# # Docker/Container window
+# - window_name: Docker
+#   panes:
+#     - shell_command:
+#         - docker ps --all
 
-  # Shell for ad-hoc commands
-  - window_name: bash
-    panes:
-      - shell_command:
-          - hyfetch
-          - mise run status
+# # Shell for ad-hoc commands
+# - window_name: Bash
+#   panes:
+#     - shell_command:
+#         - hyfetch
+#         - mise run status

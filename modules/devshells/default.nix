@@ -14,10 +14,11 @@ let
       buildInputs = old.buildInputs ++ config.packages;
       shellHook = old.shellHook + "\n" + config.shellHook;
       # mkShell doesn't expose env via overrideAttrs, so we set it directly
-      env = (old.env or {}) // (config.env or {}) // { KALILIX_SHELL = name; };
+      env = (old.env or { }) // (config.env or { }) // { KALILIX_SHELL = name; };
     });
 
-in {
+in
+{
   # Default shell is base
   default = base;
 
@@ -31,11 +32,11 @@ in {
         ps.black
         ps.mypy
         # MCP packages
-        ps.mcp  # Official Python SDK for Model Context Protocol
-        ps.fastmcp  # Fast, Pythonic way to build MCP servers
-        ps.mcpadapt  # MCP servers tool
-        ps.django-mcp-server  # Django MCP Server
-        ps.fastapi-mcp  # FastAPI MCP integration
+        ps.mcp # Official Python SDK for Model Context Protocol
+        ps.fastmcp # Fast, Pythonic way to build MCP servers
+        ps.mcpadapt # MCP servers tool
+        ps.django-mcp-server # Django MCP Server
+        ps.fastapi-mcp # FastAPI MCP integration
       ]))
       ruff
       uv
@@ -164,10 +165,10 @@ in {
       cosign
 
       # MCP servers (from unstable)
-      unstable.github-mcp-server  # GitHub's official MCP Server
-      unstable.gitea-mcp-server  # Gitea MCP Server
-      unstable.mcp-k8s-go  # MCP server for Kubernetes
-      unstable.mcp-grafana  # MCP server for Grafana
+      unstable.github-mcp-server # GitHub's official MCP Server
+      unstable.gitea-mcp-server # Gitea MCP Server
+      unstable.mcp-k8s-go # MCP server for Kubernetes
+      unstable.mcp-grafana # MCP server for Grafana
     ];
 
     shellHook = ''
@@ -246,20 +247,20 @@ in {
   neovim = extendShell "neovim" {
     packages = neovimModule.neovim-packages ++ (with pkgs; [
       # Required dependencies for telescope
-      ripgrep  # For live_grep
-      fd       # For find_files
+      ripgrep # For live_grep
+      fd # For find_files
 
       # Formatters (Phase 2)
-      nixpkgs-fmt           # Nix
-      black                 # Python
-      isort                 # Python imports
-      rustfmt               # Rust (usually from rust toolchain)
-      go                    # Go (includes gofmt and goimports)
+      nixpkgs-fmt # Nix
+      black # Python
+      isort # Python imports
+      rustfmt # Rust (usually from rust toolchain)
+      go # Go (includes gofmt and goimports)
       nodePackages.prettier # JS/TS/Markdown/YAML/JSON
-      shfmt                 # Bash/Shell
+      shfmt # Bash/Shell
 
       # Phase 3 dependencies
-      lazygit               # Git TUI for toggleterm integration
+      lazygit # Git TUI for toggleterm integration
     ]);
 
     shellHook = ''
@@ -270,6 +271,11 @@ in {
       echo "   Features: Completion, Snippets, Auto-format on save"
       echo "   Git: gitsigns, fugitive, diffview, lazygit"
       echo "   Tools: toggleterm, rest.nvim, markdown-preview, which-key"
+      echo ""
+      echo "   ClaudeCode MCP Integration:"
+      echo "     <leader>cc - Start Claude Code server"
+      echo "     <leader>cs - Show Claude Code status"
+      echo "     <leader>cq - Stop Claude Code server"
       echo ""
     '';
 
