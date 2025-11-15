@@ -62,8 +62,12 @@ let
     set -g mouse on
     set -g escape-time 0
     set -g prefix C-a
-    unbind C-b
+    # Don't unbind C-b - allow it to pass through to nested sessions
+    # unbind C-b  # COMMENTED: Allow C-b passthrough for nested tmux
     bind C-a send-prefix
+
+    # Allow C-b to be sent to nested tmux sessions
+    bind-key b send-keys C-b
 
     # ============================================
     # Environment Configuration
@@ -159,8 +163,11 @@ let
     ''}
 
     # ============================================
-    # Nested Session Support (F12 Toggle)
+    # Nested Session Support (F12 Toggle + C-b passthrough)
     # ============================================
+    # For nested sessions: outer uses C-a, inner uses C-b
+    # Press C-a b to send C-b to inner session
+    # Or use F12 to toggle outer session OFF completely
     # Color scheme variables for OFF state
     color_status_text="colour245"
     color_window_off_status_bg="colour238"

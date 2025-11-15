@@ -81,6 +81,27 @@ pkgs.mkShell {
   shellHook = ''
     ${bashConfig.shellInitScript}
 
+    # Prevent rlwrap double-wrapping in nested shells
+    export RLWRAP_HOME="${pkgs.writeTextDir "rlwrap" ""}"
+
+    # Create bash wrapper that properly handles nested shells
+    bash() {
+      # Use the Nix bash, not system bash
+      local BASH_BIN="${pkgs.bash}/bin/bash"
+
+      # Check if we're in a situation where we should NOT load completions
+      # (e.g., very old bash, restricted shell, etc.)
+      if [ -n "$BASH_EXECUTION_STRING" ]; then
+        # Non-interactive command execution
+        "$BASH_BIN" "$@"
+      else
+        # Interactive shell - use our properly configured bash
+        # Set INPUTRC explicitly for the nested shell
+        INPUTRC="${bashConfig.bashInputrc}" "$BASH_BIN" "$@"
+      fi
+    }
+    export -f bash
+
     # Load .env if exists
     [ -f .env ] && source .env
 

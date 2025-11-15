@@ -35,9 +35,39 @@ let
   };
 
   nvimTerminalBashWrapper = pkgs.writeShellScript "nvim-terminal-bash" ''
+    # Set consistent INPUTRC for nested shells
+    export INPUTRC="${bashInputrc}"
     # Use rlwrap to provide readline features (arrow keys, history) in the libvterm PTY
     exec ${pkgs.rlwrap}/bin/rlwrap ${pkgs.bash}/bin/bash --rcfile ${nvimTerminalBashrc}
   '';
+
+  # Inputrc for consistent readline behavior across all bash instances
+  bashInputrc = pkgs.writeText "kalilix-bash-inputrc" ''
+    # Enable proper key bindings
+    set enable-keypad on
+    set input-meta on
+    set output-meta on
+    set convert-meta off
+
+    # Arrow keys for history navigation
+    "\e[A": previous-history
+    "\e[B": next-history
+    "\e[C": forward-char
+    "\e[D": backward-char
+
+    # Home/End keys
+    "\e[H": beginning-of-line
+    "\e[F": end-of-line
+
+    # Delete key
+    "\e[3~": delete-char
+
+    # Completion settings
+    set completion-ignore-case on
+    set show-all-if-ambiguous on
+    set colored-stats on
+  '';
+
 in
 {
   # Shared bash configuration for both nix shells and neovim terminals
@@ -57,19 +87,42 @@ in
     unset LC_ALL 2>/dev/null || true
 
     # ============================================
+    # Readline Configuration
+    # ============================================
+    # Set a proper INPUTRC to avoid conflicts in nested shells
+    export INPUTRC="${bashInputrc}"
+
+    # ============================================
     # Bash Completion
     # ============================================
-    # Source bash-completion if available
-    if [ -f ${pkgs.bash-completion}/share/bash-completion/bash_completion ]; then
-      source ${pkgs.bash-completion}/share/bash-completion/bash_completion
+    # Only load bash-completion if we have proper bash with progcomp support
+    # Check if running in bash and if programmable completion is available
+    if [ -n "$BASH_VERSION" ]; then
+      # Check if programmable completion is available
+      if shopt -q progcomp 2>/dev/null; then
+        # Source bash-completion if available (guard against multiple sourcing)
+        if [ -z "$__BASH_COMPLETION_LOADED" ] && [ -f ${pkgs.bash-completion}/share/bash-completion/bash_completion ]; then
+          source ${pkgs.bash-completion}/share/bash-completion/bash_completion 2>/dev/null || true
+          export __BASH_COMPLETION_LOADED=1
+        fi
+      fi
     fi
 
     # ============================================
     # Starship Prompt
     # ============================================
-    # Initialize starship prompt
-    if command -v starship &>/dev/null; then
+    # Initialize starship prompt only if we have a proper terminal
+    # and we're not in a nested shell that might have issues
+    if command -v starship &>/dev/null && [ -t 0 ] && [ -z "$STARSHIP_SHELL" ]; then
       eval "$(starship init bash)"
+    elif [ -t 0 ]; then
+      # Fallback to simple prompt if starship isn't available or suitable
+      # Use plain format without readline escape sequences if they're not supported
+      if [ -n "$BASH_VERSION" ] && [[ "$TERM" != "dumb" ]]; then
+        PS1='\u@\h:\w\$ '
+      else
+        PS1='$ '
+      fi
     fi
 
     # ============================================
@@ -87,5 +140,5 @@ in
 
   # Export the Nix store path to the terminal bashrc file and wrapper script
   # These are used by neovim.nix for toggleterm configuration
-  inherit nvimTerminalBashrc nvimTerminalBashWrapper;
+  inherit nvimTerminalBashrc nvimTerminalBashWrapper bashInputrc;
 }
