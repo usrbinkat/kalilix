@@ -205,6 +205,9 @@ in
       volatility2-bin # Memory forensics framework (classic)
       volatility3 # Memory forensics framework (modern)
       radare2 # Reverse engineering framework
+      binwalk # Firmware analysis tool
+      recon-ng # Reconnaissance framework
+      medusa # Network authentication brute forcer
     ]);
 
     shellHook = ''

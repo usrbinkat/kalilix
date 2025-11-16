@@ -36,6 +36,7 @@ nix develop .#kali
 | **john** | Password cracker | `john --wordlist=rockyou.txt hashes.txt` |
 | **hashcat** | Advanced password recovery | `hashcat -m 0 -a 0 hashes.txt wordlist.txt` |
 | **thc-hydra** | Network login brute forcer | `hydra -l admin -P passwords.txt ssh://target.com` |
+| **medusa** | Modular login brute forcer | `medusa -h target.com -u admin -P passwords.txt -M ssh` |
 
 ### SMB/Windows Enumeration
 | Tool | Purpose | Quick Start |
@@ -58,6 +59,7 @@ nix develop .#kali
 |------|---------|-------------|
 | **theharvester** | Email & subdomain harvester | `theharvester -d target.com -b google` |
 | **whatweb** | Web technology fingerprinter | `whatweb target.com` |
+| **recon-ng** | Reconnaissance framework | `recon-ng -w workspace_name` |
 
 ### Memory Analysis
 | Tool | Purpose | Quick Start |
@@ -69,6 +71,9 @@ nix develop .#kali
 | Tool | Purpose | Quick Start |
 |------|---------|-------------|
 | **radare2** | Binary analysis framework | `r2 binary` |
+| **objdump** | Object file disassembler | `objdump -d binary` |
+| **strings** | Extract printable strings | `strings binary \| grep -i password` |
+| **binwalk** | Firmware analysis tool | `binwalk -e firmware.bin` |
 
 ### Exploitation
 | Tool | Purpose | Quick Start |
@@ -107,12 +112,14 @@ Pre-configured variables for seamless tool integration:
 |----------|------------|----------|
 | Web Application Testing | 7 | ffuf, burpsuite, sqlmap |
 | Network Reconnaissance | 4 | nmap, masscan, netcat |
-| Credential Testing | 3 | john, hashcat, hydra |
+| Credential Testing | 4 | john, hashcat, hydra, medusa |
+| Reverse Engineering | 4 | radare2, objdump, strings, binwalk |
 | Memory Analysis | 2 | vol, volatility2 |
 | SMB Enumeration | 2 | enum4linux, enum4linux-ng |
-| Other Specialties | 11 | radare2, metasploit, aircrack-ng |
+| Intelligence Gathering | 3 | theharvester, whatweb, recon-ng |
+| Other Specialties | 6 | metasploit, aircrack-ng, dnsenum |
 
-**Total: 29 Security Tools**
+**Total: 32 Security Tools**
 
 ## Platform Support
 - **Linux** (x86_64, ARM64)
