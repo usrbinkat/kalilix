@@ -122,10 +122,21 @@ Pre-configured variables for seamless tool integration:
 **Total: 32 Security Tools**
 
 ## Platform Support
-- **Linux** (x86_64, ARM64)
-- **macOS** (Intel, Apple Silicon)
-- **Windows** (WSL2)
-- **Containers** (Docker, Podman)
+
+### Fully Supported Platforms
+- **Linux** (x86_64, ARM64) - All 32 tools available
+- **macOS** (Intel, Apple Silicon) - 28 tools available (see limitations below)
+- **Windows** (WSL2) - All 32 tools available
+- **Containers** (Docker, Podman) - All 32 tools available
+
+### macOS Limitations
+The following tools are Linux-only and not available on darwin:
+- `burpsuite` - Web application security testing (use alternatives like OWASP ZAP)
+- `wpscan` - WordPress scanner (use web-based alternatives)
+- `volatility2` - Memory forensics (classic version)
+- `volatility3` - Memory forensics (modern version)
+
+All other 28 security tools work identically on macOS and Linux.
 
 ## Advantages
 

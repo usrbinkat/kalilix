@@ -8,7 +8,7 @@ let
   neovimModule = import ./neovim.nix { inherit pkgs lib inputs; };
 
   # Import security tools
-  securityTools = import ../packages/security-tools/default.nix { inherit pkgs lib; };
+  securityTools = import ../packages/security-tools/default.nix { inherit pkgs lib system; };
 
   # Helper to extend base shell
   extendShell = name: config:
@@ -186,8 +186,10 @@ in
 
   # Kali Security Testing Environment
   kali = extendShell "kali" {
-    packages = securityTools.nixpkgsSecurityTools ++ (with pkgs; [
-      # Additional CLI security tools
+    packages = let
+      isLinux = lib.strings.hasSuffix "-linux" system;
+    in securityTools.nixpkgsSecurityTools ++ (with pkgs; [
+      # Cross-platform CLI security tools (darwin + linux)
       masscan # Mass IP port scanner
       gobuster # Directory/file and DNS brute forcer
       sqlmap # SQL injection testing tool
@@ -195,34 +197,46 @@ in
       nikto # Web server scanner
       theharvester # Information gathering tool
       whatweb # Web technology identifier
-      wpscan # WordPress security scanner
       enum4linux # SMB/CIFS enumeration tool (classic)
       enum4linux-ng # SMB/CIFS enumeration tool (modern Python rewrite)
       dnsenum # DNS enumeration tool
       john # John the Ripper password cracker
       thc-hydra # Network authentication cracker
       metasploit # Exploitation framework
-      volatility2-bin # Memory forensics framework (classic)
-      volatility3 # Memory forensics framework (modern)
       radare2 # Reverse engineering framework
       binwalk # Firmware analysis tool
       recon-ng # Reconnaissance framework
       medusa # Network authentication brute forcer
+    ] ++ lib.optionals isLinux [
+      # Linux-only tools
+      wpscan # WordPress security scanner (Linux only)
+      volatility2-bin # Memory forensics framework (classic) (Linux only)
+      volatility3 # Memory forensics framework (modern) (Linux only)
     ]);
 
-    shellHook = ''
+    shellHook = let
+      isLinux = lib.strings.hasSuffix "-linux" system;
+      webSecTools = if isLinux
+        then "burpsuite, sqlmap, gobuster, dirb, nikto, wpscan"
+        else "sqlmap, gobuster, dirb, nikto";
+      forensicsTools = if isLinux
+        then "volatility2, volatility3"
+        else "none (Linux-only)";
+    in ''
       echo "🔒 Kali Security Testing Environment"
+      echo "   Platform: ${system}"
       echo "   Web Fuzzing: ffuf"
       echo "   Network Scanning: nmap, masscan"
-      echo "   Web Security: burpsuite, sqlmap, gobuster, dirb, nikto"
+      echo "   Web Security: ${webSecTools}"
       echo "   SMB/CIFS Enumeration: enum4linux, enum4linux-ng"
       echo "   DNS Enumeration: dnsenum"
       echo "   Wireless: aircrack-ng"
-      echo "   Password: hashcat, john, hydra"
+      echo "   Password: hashcat, john, hydra, medusa"
       echo "   Exploitation: metasploit"
-      echo "   Forensics: volatility2, volatility3"
-      echo "   Reverse Engineering: radare2"
+      echo "   Forensics: ${forensicsTools}"
+      echo "   Reverse Engineering: radare2, binwalk"
       echo "   Network Analysis: wireshark, tcpdump"
+      echo "   Intelligence: theharvester, whatweb, recon-ng"
       echo ""
 
       # Create Kali-style directory structure
@@ -236,7 +250,12 @@ in
       echo "   Wordlists: $WORDLISTS"
       echo "   Tools: $KALI_TOOLS_DIR"
       echo ""
-      echo "🎯 Ready for security testing (CLI tools only)"
+      ${if isLinux then ''
+        echo "🎯 Ready for security testing (Full CLI + GUI tools)"
+      '' else ''
+        echo "🎯 Ready for security testing (CLI tools - some Linux-only tools excluded)"
+        echo "   Note: burpsuite, wpscan, volatility excluded on darwin"
+      ''}
     '';
 
     env = {

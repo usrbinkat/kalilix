@@ -1,20 +1,27 @@
-{ pkgs, lib, ... }:
+{ pkgs, lib, system, ... }:
 
+let
+  # Helper to check if running on Linux
+  isLinux = lib.strings.hasSuffix "-linux" system;
+in
 {
   # Security tools that are already in nixpkgs
   # These are direct references to nixpkgs packages
   nixpkgsSecurityTools = with pkgs; [
+    # Cross-platform tools (darwin + linux)
     ffuf # Fast web fuzzer
     nmap # Network discovery and security auditing
     aircrack-ng # Wireless security auditing
     hashcat # Password recovery utility
     wireshark # Network protocol analyzer
-    burpsuite # Web application security testing
     curl # Command line HTTP client
     wget # File retriever
     netcat # TCP/UDP swiss army knife
     socat # Multipurpose relay tool
     tcpdump # Command-line packet analyzer
+  ] ++ lib.optionals isLinux [
+    # Linux-only tools
+    burpsuite # Web application security testing (Linux only)
   ];
 
   # Custom kali-style desktop entries for security tools
