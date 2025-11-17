@@ -6,6 +6,8 @@
 [![Nix](https://img.shields.io/badge/Nix-5277C3?logo=nixos&logoColor=white)](https://nixos.org)
 [![Built with Mise](https://img.shields.io/badge/Built%20with-Mise-4A9EFF)](https://mise.jdx.dev)
 
+![Kalilix Screenshot](.artifacts/kalilix.png)
+
 ---
 
 ## What is Kalilix?
