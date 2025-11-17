@@ -24,7 +24,7 @@ trusted_config_paths = [
 [vars]
 # Project identity
 project_name = "kalilix"
-project_org = "usrbinkat"
+project_org = "scopecreep-zip"
 project_env = "development"
 
 # Platform detection (set dynamically in tasks)

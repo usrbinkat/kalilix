@@ -23,10 +23,10 @@ kubectl create secret generic kargo-sshpubkey-kali \
   --namespace=default
 
 # 2. Deploy from main branch
-kubectl kustomize https://github.com/usrbinkat/kalilix//kubevirt?ref=main | kubectl apply -f -
+kubectl kustomize https://github.com/scopecreep-zip/kalilix//kubevirt?ref=main | kubectl apply -f -
 
 # Or deploy from feature branch for testing
-kubectl kustomize https://github.com/usrbinkat/kalilix//kubevirt?ref=feat/kubevirt-bootstrap | kubectl apply -f -
+kubectl kustomize https://github.com/scopecreep-zip/kalilix//kubevirt?ref=feat/kubevirt-bootstrap | kubectl apply -f -
 ```
 
 ### Deploy from Local Clone
@@ -117,7 +117,7 @@ Edit `kalilix-userdata.yaml` line 48 to change the branch:
 
 ```yaml
 runcmd:
-  - sudo -u kali git clone -b YOUR_BRANCH https://github.com/usrbinkat/kalilix.git /home/kali/.kalilix
+  - sudo -u kali git clone -b YOUR_BRANCH https://github.com/scopecreep-zip/kalilix.git /home/kali/.kalilix
 ```
 
 Then deploy locally:

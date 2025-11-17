@@ -27,7 +27,6 @@ Kalilix provides **deterministic, reproducible development environments** withou
 ### Prerequisites
 
 - **Lix** (Nix variant) - [installation guide](https://lix.systems/install/)
-- **Git** (any modern version)
 
 ### Installation (4 Commands)
 
@@ -51,7 +50,7 @@ EOF
 source ~/.bashrc
 
 # 4. Enter development environment (no clone required!)
-nix develop github:usrbinkat/kalilix
+nix develop github:scopecreep-zip/kalilix
 ```
 
 **That's it!** You now have a complete polyglot development environment with Python 3.12, Go 1.23, Rust, Node.js 22, DevOps tools, and security utilities.
@@ -62,7 +61,7 @@ For regular use, add Kalilix to your flake registry for shorter commands:
 
 ```bash
 # Add to registry
-nix registry add kalilix github:usrbinkat/kalilix
+nix registry add kalilix github:scopecreep-zip/kalilix
 
 # Now use short commands
 nix develop kalilix#python
@@ -114,7 +113,7 @@ Kalilix provides **9 specialized environments**, each extending a common base:
 
 ```bash
 # List all available shells
-nix flake show github:usrbinkat/kalilix
+nix flake show github:scopecreep-zip/kalilix
 
 # Try different shells
 nix develop kalilix#python   # Python development
@@ -127,10 +126,10 @@ nix develop kalilix#neovim   # Full IDE experience
 
 ```bash
 # Specific branch
-nix develop github:usrbinkat/kalilix/main#python
+nix develop github:scopecreep-zip/kalilix/main#python
 
 # Specific commit (fully reproducible)
-nix develop github:usrbinkat/kalilix/30ed44a#go
+nix develop github:scopecreep-zip/kalilix/30ed44a#go
 
 # Using registry shortcut
 nix develop kalilix/30ed44a#rust
@@ -474,7 +473,7 @@ If you're developing Kalilix itself or want persistent local configuration:
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/usrbinkat/kalilix.git
+git clone https://github.com/scopecreep-zip/kalilix.git
 cd kalilix
 
 # 2. Enter base shell
@@ -665,10 +664,10 @@ Native flake support - import modules directly:
 **Usage:**
 ```bash
 # Direct shell access
-nix develop github:usrbinkat/kalilix#python
+nix develop github:scopecreep-zip/kalilix#python
 
 # Or via registry
-nix registry add kalilix github:usrbinkat/kalilix
+nix registry add kalilix github:scopecreep-zip/kalilix
 nix develop kalilix#go
 ```
 
@@ -819,7 +818,7 @@ Key configuration in `.env`:
 ```bash
 # Project Identity
 PROJECT_NAME=kalilix
-PROJECT_ORG=usrbinkat
+PROJECT_ORG=scopecreep-zip
 PROJECT_ENV=development
 
 # Shell Selection
@@ -1116,7 +1115,7 @@ By building on **Nix's foundation of reproducible, declarative configuration**, 
 - **Documentation**: `docs/` directory
 - **AI Guidance**: `CLAUDE.md` for Claude Code
 - **Neovim Guide**: `NEOVIM.md` for editor configuration
-- **Issues**: [GitHub Issues](https://github.com/usrbinkat/kalilix/issues)
+- **Issues**: [GitHub Issues](https://github.com/scopecreep-zip/kalilix/issues)
 
 ### Getting Help
 

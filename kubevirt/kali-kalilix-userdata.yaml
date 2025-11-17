@@ -33,7 +33,7 @@ runcmd:
   - usermod -aG docker kali
   - sudo -iu kali nix --version
   - sudo -iu kali mise --version
-  - sudo -iu kali bash -c 'nix build github:usrbinkat/kalilix#devShells.x86_64-linux.full --no-write-lock-file || true'
+  - sudo -iu kali bash -c 'nix build github:scopecreep-zip/kalilix#devShells.x86_64-linux.full --no-write-lock-file || true'
   - |
     cat > /etc/motd <<'EOF'
     ╔═════════════════════════════════════════════════════════╗
@@ -46,9 +46,9 @@ runcmd:
     ║  nix: pre-installed (multi-user daemon)                 ║
     ║                                                         ║
     ║  Quick Start:                                           ║
-    ║    nix develop github:usrbinkat/kalilix#full            ║
-    ║    nix develop github:usrbinkat/kalilix#python          ║
-    ║    nix develop github:usrbinkat/kalilix#devops          ║
+    ║    nix develop github:scopecreep-zip/kalilix#full            ║
+    ║    nix develop github:scopecreep-zip/kalilix#python          ║
+    ║    nix develop github:scopecreep-zip/kalilix#devops          ║
     ║                                                         ║
     ╚═════════════════════════════════════════════════════════╝
     EOF

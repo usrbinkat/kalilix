@@ -68,7 +68,7 @@
         "kalilix.code-workspace"
       ],
       "repositories": {
-        "${localEnv:PROJECT_ORG:usrbinkat}/*": {
+        "${localEnv:PROJECT_ORG:scopecreep-zip}/*": {
           "permissions": "write-all"
         }
       }

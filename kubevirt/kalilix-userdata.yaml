@@ -45,7 +45,7 @@ runcmd:
   - systemctl restart docker
   - usermod -aG docker kali
   - sudo -u kali bash -c 'curl https://mise.run | sh'
-  - sudo -u kali git clone -b feat/kubevirt-bootstrap https://github.com/usrbinkat/kalilix.git /home/kali/.kalilix
+  - sudo -u kali git clone -b feat/kubevirt-bootstrap https://github.com/scopecreep-zip/kalilix.git /home/kali/.kalilix
   - sudo -u kali bash -c 'cd /home/kali/.kalilix && /home/kali/.local/bin/mise trust /home/kali/.kalilix'
   - sudo -u kali bash -c 'cd /home/kali/.kalilix && /home/kali/.local/bin/mise trust /home/kali/.kalilix/.config'
   - sudo -u kali bash -c 'cd /home/kali/.kalilix && /home/kali/.local/bin/mise trust /home/kali/.kalilix/.config/mise'

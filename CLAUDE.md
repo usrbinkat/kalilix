@@ -209,7 +209,7 @@ Key configuration vars (in `.env` or `.env.example`):
 
 ```bash
 PROJECT_NAME=kalilix
-PROJECT_ORG=usrbinkat
+PROJECT_ORG=scopecreep-zip
 KALILIX_SHELL=base           # Default shell: base|python|go|rust|node|devops|full
 KALILIX_PLATFORM=auto        # Platform: auto|docker|native|wsl
 COMPOSE_PROJECT_NAME=kalilix

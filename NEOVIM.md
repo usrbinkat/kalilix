@@ -31,7 +31,7 @@ The Kalilix Neovim shell provides a **fully-configured, immutable Neovim environ
 nix develop .#neovim
 
 # Or remotely
-nix develop github:usrbinkat/kalilix#neovim
+nix develop github:scopecreep-zip/kalilix#neovim
 
 # Launch Neovim
 nvim

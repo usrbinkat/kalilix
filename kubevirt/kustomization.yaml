@@ -17,7 +17,7 @@
 # 2. Deploy golden image + VM using kustomize (creates golden image first, then clones for VM):
 #    kubectl apply -k kubevirt/
 #    # OR from GitHub:
-#    kubectl kustomize https://github.com/usrbinkat/kalilix//kubevirt?ref=main | kubectl apply -f -
+#    kubectl kustomize https://github.com/scopecreep-zip/kalilix//kubevirt?ref=main | kubectl apply -f -
 #
 # 3. Monitor golden image import (one-time WAN pull):
 #    kubectl get dv kali-2025-3-golden-image -w
@@ -93,5 +93,5 @@ labels:
 
 # Metadata annotations
 commonAnnotations:
-  kalilix.io/repo: "https://github.com/usrbinkat/kalilix"
+  kalilix.io/repo: "https://github.com/scopecreep-zip/kalilix"
   kalilix.io/description: "Kalilix minimal development environment with automated Lix/Nix bootstrap"
