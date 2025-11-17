@@ -26,13 +26,14 @@ Kalilix provides **deterministic, reproducible development environments** withou
 
 ### Prerequisites
 
-- **Lix** (Nix variant) - installation below
+- **Lix** (Nix variant) - [installation guide](https://lix.systems/install/)
 - **Git** (any modern version)
 
 ### Installation (4 Commands)
 
 ```bash
 # 1. Install Lix with Kalilix-optimized configuration
+# See https://lix.systems/install/ for more installation options
 curl -sSf -L https://install.lix.systems/lix | sh -s -- install \
   --no-confirm \
   --extra-conf "experimental-features = nix-command flakes" \
