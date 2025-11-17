@@ -5,6 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Nix](https://img.shields.io/badge/Nix-5277C3?logo=nixos&logoColor=white)](https://nixos.org)
 [![Built with Mise](https://img.shields.io/badge/Built%20with-Mise-4A9EFF)](https://mise.jdx.dev)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/scopecreep-zip/kalilix)
 
 ![Kalilix Screenshot](.artifacts/kalilix.png)
 
